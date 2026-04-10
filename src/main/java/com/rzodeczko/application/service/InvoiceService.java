@@ -35,7 +35,6 @@ public class InvoiceService {
         );
     }
 
-    // Zapisuje nowa fakture. Wywolywana wewnatrz transakcji.
     public void saveNewInvoice(Invoice invoice) {
         invoiceRepository.save(invoice);
     }
