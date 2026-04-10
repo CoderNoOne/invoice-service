@@ -1,0 +1,81 @@
+services:
+  # --------------------------------------------------------------------------------------------------------------------
+  # INVOICE MYSQL
+  # --------------------------------------------------------------------------------------------------------------------
+  invoice-mysql:
+    image: mysql:9.6.0
+    restart: unless-stopped
+    volumes:
+      - invoice-mysql:/var/lib/mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: ${INVOICE_SERVICE_MYSQL_DB_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${INVOICE_SERVICE_MYSQL_DB_NAME}
+      MYSQL_USER: ${INVOICE_SERVICE_MYSQL_DB_USER}
+      MYSQL_PASSWORD: ${INVOICE_SERVICE_MYSQL_DB_PASSWORD}
+    command: >
+      --default-time-zone='+00:00'
+      --character-set-server=utf8mb4
+      --collation-server=utf8mb4_unicode_ci
+      --innodb-buffer-pool-size=${INVOICE_SERVICE_MYSQL_INNODB_BUFFER_POOL_SIZE}
+      --max-connections=${INVOICE_SERVICE_MYSQL_MAX_CONNECTIONS}
+    ports:
+      - '${INVOICE_SERVICE_MYSQL_DB_PORT}:3306'
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: "1.0"
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "3"
+    healthcheck:
+      test: [ "CMD-SHELL", "mysql -h localhost -u $$MYSQL_USER -p$$MYSQL_PASSWORD -e \"SELECT 1 FROM information_schema.schemata WHERE schema_name='$$MYSQL_DATABASE'\"" ]
+      interval: 10s
+      timeout: 5s
+      retries: 15
+      start_period: 30s
+    networks:
+      - mr-network
+
+  # --------------------------------------------------------------------------------------------------------------------
+  # INVOICE SERVICE
+  # --------------------------------------------------------------------------------------------------------------------
+  invoice-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: on-failure:5
+    ports:
+      - "${INVOICE_SERVICE_PORT}:${INVOICE_SERVICE_PORT}"
+    depends_on:
+      invoice-mysql:
+        condition: service_healthy
+    environment:
+      SPRING_APPLICATION_NAME: ${INVOICE_SERVICE_APPLICATION_NAME}
+      SPRING_DATASOURCE_URL: jdbc:mysql://${INVOICE_SERVICE_MYSQL_DB_HOST}:3306/${INVOICE_SERVICE_MYSQL_DB_NAME}?useUnicode=true&useJDBCCompliantTimezoneShift=true&useLegacyDatetimeCode=false&serverTimezone=UTC
+      SPRING_DATASOURCE_USERNAME: ${INVOICE_SERVICE_MYSQL_DB_USER}
+      SPRING_DATASOURCE_PASSWORD: ${INVOICE_SERVICE_MYSQL_DB_PASSWORD}
+      SERVER_PORT: ${INVOICE_SERVICE_PORT}
+      INVOICES_URL: ${INVOICE_SERVICE_FAKTUROWNIA_URL}
+      INVOICES_TOKEN: ${INVOICE_SERVICE_FAKTUROWNIA_TOKEN}
+    deploy:
+      resources:
+        limits:
+          memory: 768M
+          cpus: "1.0"
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "3"
+    networks:
+      - mr-network
+
+
+volumes:
+  invoice-mysql:
+
+networks:
+  mr-network:
