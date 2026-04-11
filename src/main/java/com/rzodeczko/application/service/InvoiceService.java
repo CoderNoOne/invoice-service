@@ -8,6 +8,9 @@ import com.rzodeczko.domain.repository.InvoiceRepository;
 import java.util.List;
 import java.util.UUID;
 
+/**
+ * Service class providing business logic for invoice operations.
+ */
 public class InvoiceService {
 
     private final InvoiceRepository invoiceRepository;

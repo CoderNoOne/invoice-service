@@ -2,6 +2,9 @@ package com.rzodeczko.domain.model;
 
 import java.math.BigDecimal;
 
+/**
+ * Entity representing an item on an invoice.
+ */
 public record InvoiceItem(
         String name,
         int quantity,

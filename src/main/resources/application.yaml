@@ -30,3 +30,7 @@ spring:
 fakturownia:
   url: ${INVOICES_URL}
   token: ${INVOICES_TOKEN}
+
+app:
+  cors:
+    swagger-origin: "http://localhost:${SWAGGER_UI_PORT}"

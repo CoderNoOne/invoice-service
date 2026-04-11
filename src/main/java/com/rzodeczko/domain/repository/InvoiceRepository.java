@@ -6,6 +6,9 @@ import com.rzodeczko.domain.model.Invoice;
 import java.util.Optional;
 import java.util.UUID;
 
+/**
+ * Repository interface for managing Invoice entities in the persistence layer.
+ */
 public interface InvoiceRepository {
     void save(Invoice invoice);
 

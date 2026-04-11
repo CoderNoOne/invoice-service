@@ -4,7 +4,9 @@ import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
 
-
+/**
+ * Entity representing an invoice in the system.
+ */
 public class Invoice {
     private final UUID id;
     private final UUID orderId;

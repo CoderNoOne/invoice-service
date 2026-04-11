@@ -1,0 +1,213 @@
+openapi: 3.0.3
+info:
+  title: Invoice Service API
+  version: 1.0.0
+  description: |
+    OpenAPI specification for the Invoice Service. Provides endpoints for invoice creation and PDF retrieval.
+servers:
+  - url: http://localhost:{{ INVOICE_SERVICE_PORT }}
+    description: Local development
+
+tags:
+  - name: Invoices
+    description: Endpoints for invoice management
+
+paths:
+  /invoices:
+    post:
+      tags: [Invoices]
+      summary: Create a new invoice
+      operationId: createInvoice
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateInvoiceRequest'
+            examples:
+              sample:
+                value:
+                  orderId: 11111111-1111-1111-1111-111111111111
+                  taxId: 123-456-78-90
+                  buyerName: John Doe
+                  items:
+                    - name: Product A
+                      quantity: 2
+                      price: 99.99
+                    - name: Product B
+                      quantity: 1
+                      price: 49.99
+      responses:
+        '201':
+          description: Invoice created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateInvoiceResponse'
+              examples:
+                success:
+                  value:
+                    invoiceId: 3fa85f64-5717-4562-b3fc-2c963f66afa6
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '409':
+          $ref: '#/components/responses/ConflictError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /invoices/{id}/pdf:
+    get:
+      tags: [Invoices]
+      summary: Download invoice PDF
+      operationId: getInvoicePdf
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Unique invoice identifier (UUID)
+      responses:
+        '200':
+          description: PDF file of the invoice
+          content:
+            application/pdf:
+              schema:
+                type: string
+                format: binary
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+components:
+  responses:
+    BadRequestError:
+      description: Request validation or domain error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          examples:
+            validation:
+              value:
+                status: 400
+                error: Validation failed
+                message: 'taxId: must not be blank'
+                timestamp: '2026-04-11T10:00:00Z'
+    ConflictError:
+      description: Business conflict (e.g., invoice already exists)
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          examples:
+            conflict:
+              value:
+                status: 409
+                error: Conflict
+                message: Invoice already exists for given orderId
+                timestamp: '2026-04-11T10:00:00Z'
+    NotFoundError:
+      description: Invoice not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          examples:
+            notFound:
+              value:
+                status: 404
+                error: Not Found
+                message: Invoice not found
+                timestamp: '2026-04-11T10:00:00Z'
+    InternalServerError:
+      description: Unexpected server error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          examples:
+            internal:
+              value:
+                status: 500
+                error: Internal Server Error
+                message: Unexpected error
+                timestamp: '2026-04-11T10:00:00Z'
+
+  schemas:
+    CreateInvoiceRequest:
+      type: object
+      required:
+        - orderId
+        - taxId
+        - buyerName
+        - items
+      properties:
+        orderId:
+          type: string
+          format: uuid
+          description: Unique order identifier
+        taxId:
+          type: string
+          description: Tax identification number
+        buyerName:
+          type: string
+          description: Name of the buyer
+        items:
+          type: array
+          minItems: 1
+          items:
+            $ref: '#/components/schemas/InvoiceItem'
+    CreateInvoiceResponse:
+      type: object
+      required:
+        - invoiceId
+      properties:
+        invoiceId:
+          type: string
+          format: uuid
+          description: Unique invoice identifier
+    InvoiceItem:
+      type: object
+      required:
+        - name
+        - quantity
+        - price
+      properties:
+        name:
+          type: string
+          description: Name of the item
+        quantity:
+          type: integer
+          minimum: 1
+          description: Quantity of the item
+        price:
+          type: number
+          format: double
+          minimum: 0.01
+          description: Price per item
+    ErrorResponse:
+      type: object
+      required:
+        - status
+        - error
+        - message
+        - timestamp
+      properties:
+        status:
+          type: integer
+          format: int32
+          example: 400
+        error:
+          type: string
+          example: Bad Request
+        message:
+          type: string
+          example: 'orderId: must not be null'
+        timestamp:
+          type: string
+          format: date-time
+          example: '2026-04-11T10:00:00Z'
+

@@ -1,4 +1,4 @@
-package com.rzodeczko.presentation;
+package com.rzodeczko.presentation.controller;
 
 import com.rzodeczko.presentation.dto.HealthCheckResponseDto;
 import org.springframework.http.ResponseEntity;

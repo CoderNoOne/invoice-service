@@ -10,6 +10,7 @@ import com.rzodeczko.application.service.InvoiceService;
 import com.rzodeczko.domain.exception.InvoiceAlreadyExistsException;
 import com.rzodeczko.domain.exception.InvoiceNotIssuedException;
 import com.rzodeczko.domain.exception.ResourceNotFoundException;
+import com.rzodeczko.domain.model.Invoice;
 import com.rzodeczko.infrastructure.transaction.InvoiceTransactionBoundary;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -43,6 +44,7 @@ public class InvoiceUseCaseImpl implements GenerateInvoiceUseCase, GetInvoicePdf
         invoiceTransactionBoundary.saveNewInvoice(invoice);
         log.info("Invoice DRAFT saved. invoiceId={}, orderId={}", invoice.getId(), command.orderId());
 
+        log.info("TAX SYSTEM CALL. Issuing invoice to Fakturownia. invoiceId={}", invoice.getId());
         String externalId = taxSystemPort.issueInvoice(invoice);
         log.info("Invoice issued to Fakturownia. invoiceId={}, externalId={}", invoice.getId(), externalId);
 
