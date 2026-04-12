@@ -12,7 +12,7 @@
 - [🔄 How It Works (End-to-End Invoice Flow)](#how-it-works)
 - [🌐 API Endpoints (Quick Reference)](#api-endpoints)
 - [🚀 Getting Started (Local Environment)](#getting-started)
-  - [<img src="https://cdn.simpleicons.org/swagger/85EA2D" alt="Swagger" height="14" /> Swagger UI (Local OpenAPI Preview)](#swagger-ui-local)
+   - [<img src="https://cdn.simpleicons.org/swagger/85EA2D" alt="Swagger" height="14" /> Swagger UI (Local OpenAPI Preview)](#swagger-ui-local)
 - [⚙️ Environment Variables](#environment-variables)
 - [🛠️ Common Issues / Troubleshooting](#common-issues)
 - [🏗️ Architecture](#architecture)
@@ -38,7 +38,7 @@ This repository serves as a showcase of modern backend engineering practices (as
 
 [Back to Table of Contents](#toc)
 
-This is the complete invoice lifecycle from API request to PDF retrieval and status synchronization via webhooks:
+This is the complete invoice lifecycle from API request to PDF retrieval and PDF cache invalidation via webhooks:
 
 ### Interaction sequence
 
@@ -335,7 +335,7 @@ graph TD
 * **Hexagonal Architecture (Ports & Adapters):** Strict boundary between domain, application, and infrastructure layers. The domain model (`Invoice`, `InvoiceItem`, `InvoiceStatus`) is completely isolated — all external dependencies are injected through explicit output ports (`TaxSystemPort`, `InvoiceRepository`), enabling independent testability and easy adapter swapping.
 * **Java Virtual Threads (Project Loom):** `spring.threads.virtual.enabled: true` is enabled application-wide, giving each incoming request a cheap virtual thread instead of a pooled OS thread — maximising throughput during I/O-heavy Fakturownia API calls without any reactive programming complexity.
 * **Optimistic Concurrency Control:** `InvoiceConcurrentModificationException` guards against race conditions on concurrent invoice state updates at the domain level.
-* **Webhook Support:** A dedicated `WebhookController` + `HandleInvoiceWebhookUseCase` cleanly handles status-change callbacks pushed by Fakturownia, keeping invoice state in sync without polling.
+* **Webhook Support:** A dedicated `WebhookController` + `HandleInvoiceWebhookUseCase` handles incoming callbacks from Fakturownia triggered by invoice edits in the Fakturownia panel. On each webhook, the service fetches the updated PDF from Fakturownia and overwrites the local database cache — keeping the cached PDF content in sync without polling.
 * **HikariCP Tuning:** Connection pool explicitly configured (`maximum-pool-size: 20`, `connection-timeout: 2000ms`, `keepalive-time: 30s`, `max-lifetime: 30min`) for predictable behaviour under production load.
 * **Swagger UI as a Separate Container:** API documentation is served by a standalone `swaggerapi/swagger-ui` container activated via the `docs` Docker Compose profile — keeping the main service image clean and documentation deployment optional.
 * **Optimised Multi-Stage Docker Build:** Two-stage Dockerfile — Maven compiles and packages on `eclipse-temurin-25-alpine`, then only the extracted layered JARs are copied into a minimal JRE runtime image. The app runs as a non-root user (`appuser`) with JVM flags tuned for containers (`-XX:+UseContainerSupport`, `-XX:MaxRAMPercentage=75.0`, G1GC) and a built-in Actuator healthcheck.
@@ -362,6 +362,13 @@ graph TD
 ## 🧪 Testing Strategy & Quality Assurance
 
 [Back to Table of Contents](#toc)
+
+The project is set up with full test slice support via Spring Boot's dedicated test starters:
+
+* **`spring-boot-starter-data-jpa-test`** — JPA slice tests against an isolated persistence context, validating entity mappings and repository behaviour.
+* **`spring-boot-starter-webmvc-test`** — MockMvc-based controller layer tests covering request validation and error response contracts.
+* **`spring-boot-starter-restclient-test`** — Mocked RestClient tests for the Fakturownia adapter, verifying outbound HTTP call construction and error handling.
+* **`spring-boot-starter-actuator-test`** — Actuator endpoint availability verification.
 
 ### How to run tests
 
@@ -435,5 +442,5 @@ Planned iterations for system evolution include:
 
 [Back to Table of Contents](#toc)
 
-Designed and implemented by **Michał Rzodeczko**.
+Designed and implemented by **Mateusz Rzodeczko**.
 Feel free to check out my other projects on [GitHub](https://github.com/CoderNoOne).
