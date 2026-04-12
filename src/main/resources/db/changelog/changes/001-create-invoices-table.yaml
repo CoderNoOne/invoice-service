@@ -1,0 +1,43 @@
+databaseChangeLog:
+  - changeSet:
+      id: 1
+      author: mrzodeczko-dev
+      changes:
+        - createTable:
+            tableName: invoices
+            columns:
+              - column:
+                  name: id
+                  type: CHAR(36)
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: order_id
+                  type: CHAR(36)
+                  constraints:
+                    nullable: false
+                    unique: true
+              - column:
+                  name: tax_id
+                  type: VARCHAR(255)
+              - column:
+                  name: buyer_name
+                  type: VARCHAR(255)
+              - column:
+                  name: status
+                  type: VARCHAR(255)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: external_id
+                  type: VARCHAR(255)
+              - column:
+                  name: pdf_content
+                  type: LONGBLOB
+                  constraints:
+                    nullable: true
+              - column:
+                  name: version
+                  type: BIGINT
+
