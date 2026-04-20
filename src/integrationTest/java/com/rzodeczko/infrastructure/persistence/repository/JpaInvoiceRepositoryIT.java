@@ -4,9 +4,9 @@ import com.rzodeczko.infrastructure.persistence.entity.InvoiceEntity;
 import com.rzodeczko.infrastructure.persistence.entity.InvoiceItemEmbeddable;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
-import org.springframework.boot.jdbc.test.autoconfigure.AutoConfigureTestDatabase;
+import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -15,9 +15,7 @@ import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-
-@DataJpaTest
-@AutoConfigureTestDatabase
+@SpringBootTest
 @ActiveProfiles("integration-test")
 class JpaInvoiceRepositoryIT {
 
@@ -121,6 +119,7 @@ class JpaInvoiceRepositoryIT {
     }
 
     @Test
+    @Transactional
     void findPdfContentById_shouldReturnPdfContent() {
         UUID id = UUID.randomUUID();
         byte[] pdfContent = new byte[]{1, 2, 3, 4, 5};
@@ -142,6 +141,7 @@ class JpaInvoiceRepositoryIT {
     }
 
     @Test
+    @Transactional
     void updatePdfContent_shouldUpdatePdf() {
         UUID id = UUID.randomUUID();
         byte[] initialPdf = new byte[]{1, 2, 3};

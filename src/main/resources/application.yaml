@@ -1,8 +1,8 @@
 server:
-  port: ${SERVER_PORT}
+  port: ${SERVER_PORT:8080}
 spring:
   application:
-    name: ${SPRING_APPLICATION_NAME}
+    name: ${SPRING_APPLICATION_NAME:invoice-service}
   threads:
     virtual:
       enabled: true
@@ -15,9 +15,9 @@ spring:
     open-in-view: false
 
   datasource:
-    url: ${SPRING_DATASOURCE_URL}
-    username: ${SPRING_DATASOURCE_USERNAME}
-    password: ${SPRING_DATASOURCE_PASSWORD}
+    url: ${SPRING_DATASOURCE_URL:jdbc:h2:mem:testdb}
+    username: ${SPRING_DATASOURCE_USERNAME:sa}
+    password: ${SPRING_DATASOURCE_PASSWORD:}
     hikari:
       maximum-pool-size: 20
       connection-timeout: 2000
@@ -27,11 +27,11 @@ spring:
     change-log: classpath:/db/changelog/db.changelog-master.yaml
 
 fakturownia:
-  url: ${INVOICES_URL}
-  token: ${INVOICES_TOKEN}
+  url: ${INVOICES_URL:http://localhost:3000}
+  token: ${INVOICES_TOKEN:test-token}
 
 http:
   cors:
     swagger-ui:
       enabled: true
-      allowed-origins: "http://localhost:${SWAGGER_UI_PORT}"
+      allowed-origins: "http://localhost:${SWAGGER_UI_PORT:8080}"
