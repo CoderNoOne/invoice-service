@@ -318,7 +318,8 @@ The project uses Spring Boot's dedicated test slice starters to keep each test l
 | `spring-boot-starter-actuator-test` | Actuator endpoint availability |
 
 ```bash
-mvn test
+- `mvn test` runs unit tests only.
+- `mvn verify` runs integration tests only.
 ```
 
 ---
