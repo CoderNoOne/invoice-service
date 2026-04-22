@@ -385,8 +385,6 @@ JVM is tuned for container environments: `-XX:+UseContainerSupport`, `-XX:MaxRAM
 [↑ Back to top](#toc)
 
 - **Testcontainers** — ephemeral MySQL instances in integration tests, fully isolated and reproducible without external DB dependencies.
-- **Resilience4j** — Retry + Circuit Breaker on Fakturownia RestClient calls to handle transient API unavailability gracefully.
-- **CI/CD Pipeline** — GitHub Actions workflow automating build → test → Docker image push with JaCoCo coverage gate.
 - **Distributed Tracing** — OpenTelemetry integration with Tempo/Jaeger for end-to-end request visibility.
 
 ---
