@@ -2,6 +2,8 @@ package com.rzodeczko.presentation.controller;
 
 
 import com.rzodeczko.application.port.input.HandleInvoiceWebhookUseCase;
+import com.rzodeczko.infrastructure.webhook.access.TrustedWebhookClient;
+import com.rzodeczko.infrastructure.webhook.access.aop.WebhookSecured;
 import com.rzodeczko.presentation.dto.FakturowniaWebhookDto;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -19,17 +21,18 @@ public class WebhookController {
     private final HandleInvoiceWebhookUseCase handleInvoiceWebhookUseCase;
 
     @PostMapping("/fakturownia/invoices/update")
+    @WebhookSecured(value = TrustedWebhookClient.FAKTUROWNIA, rateLimited = true)
     public ResponseEntity<Void> handleInvoiceUpdated(
             @RequestBody FakturowniaWebhookDto payload
     ) {
-        log.info("Webhook for invoice updated: fakturowniaId={}", payload.id());
+        log.info(">>> Webhook for invoice updated: payload Id={}", payload.id());
 
         if (
                 payload.deal() == null ||
                         payload.deal().externalIds() == null ||
                         !payload.deal().externalIds().containsKey("fakturownia")
         ) {
-            log.info("Webhook without externalId: fakturowniaId={}", payload.id());
+            log.info("<<< Webhook without externalId: fakturowniaId={}", payload.id());
             return ResponseEntity.ok().build();
         }
 

@@ -3,6 +3,8 @@ package com.rzodeczko.infrastructure.configuration;
 import com.rzodeczko.application.service.InvoiceService;
 import com.rzodeczko.domain.repository.InvoiceRepository;
 import com.rzodeczko.infrastructure.configuration.properties.FakturowniaProperties;
+import com.rzodeczko.infrastructure.configuration.properties.RedisProperties;
+import com.rzodeczko.infrastructure.configuration.properties.WebhookApiTokens;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.boot.restclient.RestClientCustomizer;
 import org.springframework.context.annotation.Bean;
@@ -14,7 +16,7 @@ import java.time.Duration;
 import java.util.concurrent.Executors;
 
 @Configuration
-@EnableConfigurationProperties({FakturowniaProperties.class})
+@EnableConfigurationProperties({FakturowniaProperties.class, WebhookApiTokens.class, RedisProperties.class})
 public class BeanConfiguration {
 
 

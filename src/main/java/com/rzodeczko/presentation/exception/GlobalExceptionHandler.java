@@ -4,6 +4,7 @@ package com.rzodeczko.presentation.exception;
 import com.rzodeczko.application.exception.EmptyPdfResponseException;
 import com.rzodeczko.application.exception.ExternalTaxSystemException;
 import com.rzodeczko.application.exception.InvoiceConcurrentModificationException;
+import com.rzodeczko.infrastructure.webhook.access.exception.UnauthorizedWebhookAccessException;
 import com.rzodeczko.domain.exception.InvoiceAlreadyExistsException;
 import com.rzodeczko.domain.exception.InvoiceNotIssuedException;
 import com.rzodeczko.domain.exception.ResourceNotFoundException;
@@ -34,6 +35,14 @@ public class GlobalExceptionHandler {
         return ResponseEntity
                 .status(HttpStatus.BAD_REQUEST)
                 .body(new ErrorResponseDto(400, "Validation Failed", message));
+    }
+
+    @ExceptionHandler(UnauthorizedWebhookAccessException.class)
+    public ResponseEntity<ErrorResponseDto> handle(UnauthorizedWebhookAccessException e) {
+        log.warn("Unauthorized webhook access: {}", e.getMessage());
+        return ResponseEntity
+                .status(HttpStatus.UNAUTHORIZED)
+                .body(new ErrorResponseDto(401, "Unauthorized", e.getMessage()));
     }
 
     @ExceptionHandler(IllegalArgumentException.class)
