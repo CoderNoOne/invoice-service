@@ -8,6 +8,7 @@ import com.rzodeczko.infrastructure.webhook.access.exception.UnauthorizedWebhook
 import com.rzodeczko.domain.exception.InvoiceAlreadyExistsException;
 import com.rzodeczko.domain.exception.InvoiceNotIssuedException;
 import com.rzodeczko.domain.exception.ResourceNotFoundException;
+import com.rzodeczko.infrastructure.webhook.access.exception.WebhookRateLimitExceededException;
 import com.rzodeczko.presentation.dto.ErrorResponseDto;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -43,6 +44,14 @@ public class GlobalExceptionHandler {
         return ResponseEntity
                 .status(HttpStatus.UNAUTHORIZED)
                 .body(new ErrorResponseDto(401, "Unauthorized", e.getMessage()));
+    }
+
+    @ExceptionHandler(WebhookRateLimitExceededException.class)
+    public ResponseEntity<ErrorResponseDto> handle(WebhookRateLimitExceededException e) {
+        log.warn("Webhook client rate limit exceeded: {}", e.getMessage());
+        return ResponseEntity
+                .status(HttpStatus.TOO_MANY_REQUESTS)
+                .body(new ErrorResponseDto(429, "Too many requests", e.getMessage()));
     }
 
     @ExceptionHandler(IllegalArgumentException.class)
