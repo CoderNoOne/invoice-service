@@ -134,7 +134,7 @@ public class InvoiceUseCaseImpl implements GenerateInvoiceUseCase, GetInvoicePdf
             String orderId = invoice.getOrderId().toString();
 
             Optional<InvoiceIssueResult> recoveredBeforeIssue =
-                    recoverFromExisting(invoice, taxSystemPort.findByOrderId(orderId));
+                    tryRecoverFromExisting(invoice, taxSystemPort.findByOrderId(orderId));
             if (recoveredBeforeIssue.isPresent()) {
                 return recoveredBeforeIssue.get();
             }
@@ -145,7 +145,7 @@ public class InvoiceUseCaseImpl implements GenerateInvoiceUseCase, GetInvoicePdf
             log.info("<<< Invoice issued. invoiceId={}, orderId={}, externalId={}",
                     invoice.getId(), invoice.getOrderId(), externalId);
 
-            return recoverFromExisting(invoice, taxSystemPort.findByOrderId(orderId))
+            return tryRecoverFromExisting(invoice, taxSystemPort.findByOrderId(orderId))
                     .orElseGet(() -> {
                         invoiceTransactionBoundary.markIssueUnknown(invoice);
                         log.warn("!!! Invoice visibility in fakturownia pending. invoiceId={}, orderId={}",
@@ -172,7 +172,7 @@ public class InvoiceUseCaseImpl implements GenerateInvoiceUseCase, GetInvoicePdf
      * @param externalInvoices invoices found in the external system for the same order
      * @return local invoice identifier when the state can be resolved; otherwise empty
      */
-    private Optional<InvoiceIssueResult> recoverFromExisting(
+    private Optional<InvoiceIssueResult> tryRecoverFromExisting(
             Invoice localInvoice,
             List<FakturowniaGetInvoiceDto> externalInvoices
     ) {
