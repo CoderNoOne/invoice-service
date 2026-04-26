@@ -32,7 +32,10 @@ public record CreateInvoiceRequestDto(
 
             @NotNull(message = "Price required")
             @DecimalMin(value = "0.01", message = "Price must be greater than 0")
-            BigDecimal price
+            BigDecimal price,
+
+            @DecimalMin(value = "0", message = "Tax rate cannot be negative")
+            BigDecimal taxRate
     ) {
     }
 }

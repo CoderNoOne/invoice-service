@@ -47,7 +47,7 @@ public class InvoiceController {
 
         var items = request.items()
                 .stream()
-                .map(i -> new ItemCommand(i.name(), i.quantity(), i.price()))
+                .map(i -> new ItemCommand(i.name(), i.quantity(), i.price(), i.taxRate()))
                 .toList();
 
         var command = new GenerateInvoiceCommand(

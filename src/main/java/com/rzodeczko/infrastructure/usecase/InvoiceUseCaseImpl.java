@@ -19,6 +19,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -116,48 +117,100 @@ public class InvoiceUseCaseImpl implements GenerateInvoiceUseCase, GetInvoicePdf
                 });
     }
 
-    /**
-     * Tries to recover an existing invoice or issue a new one.
-     * <p>
-     * If the result cannot be confirmed immediately, the invoice is marked as unknown
-     * and later reconciliation is expected to resolve the final state, including duplicates
-     * and deduplication across external records in fakturownia.
-     *
-     * @param invoice local invoice aggregate
-     * @return local invoice identifier
-     */
     private InvoiceIssueResult recoverOrIssue(Invoice invoice) {
         log.info(">>> Trying to recover or issue invoice. invoiceId={}, orderId={}",
                 invoice.getId(), invoice.getOrderId());
 
+        String orderId = invoice.getOrderId().toString();
+
         try {
-            String orderId = invoice.getOrderId().toString();
-
-            Optional<InvoiceIssueResult> recoveredBeforeIssue =
-                    tryRecoverFromExisting(invoice, taxSystemPort.findByOrderId(orderId));
-            if (recoveredBeforeIssue.isPresent()) {
-                return recoveredBeforeIssue.get();
-            }
-
-            String externalId = taxSystemPort.issueInvoice(invoice);
-            invoiceTransactionBoundary.markInvoiceAsIssued(invoice, externalId);
-
-            log.info("<<< Invoice issued. invoiceId={}, orderId={}, externalId={}",
-                    invoice.getId(), invoice.getOrderId(), externalId);
-
-            return tryRecoverFromExisting(invoice, taxSystemPort.findByOrderId(orderId))
-                    .orElseGet(() -> {
-                        invoiceTransactionBoundary.markIssueUnknown(invoice);
-                        log.warn("!!! Invoice visibility in fakturownia pending. invoiceId={}, orderId={}",
-                                invoice.getId(), invoice.getOrderId());
-                        return new InvoiceIssueResult.PendingConfirmation(invoice.getId());
-                    });
+            return recoverIfExists(invoice, orderId)
+                    .orElseGet(() -> issueWithRecovery(invoice, orderId));
         } catch (RuntimeException exception) {
             invoiceTransactionBoundary.markIssueUnknown(invoice);
             log.warn("!!! Invoice issue result unknown. invoiceId={}, orderId={}",
                     invoice.getId(), invoice.getOrderId(), exception);
             return new InvoiceIssueResult.PendingConfirmation(invoice.getId());
         }
+    }
+
+    private Optional<InvoiceIssueResult> reconcileFromExisting(
+            Invoice localInvoice,
+            List<FakturowniaGetInvoiceDto> externalInvoices
+    ) {
+        List<FakturowniaGetInvoiceDto> matchingInvoices = externalInvoices.stream()
+                .filter(external -> isSameBusinessInvoice(localInvoice, external))
+                .toList();
+
+        if (matchingInvoices.size() == 1) {
+            FakturowniaGetInvoiceDto externalInvoice = matchingInvoices.getFirst();
+            invoiceTransactionBoundary.markInvoiceAsIssued(localInvoice, externalInvoice.id());
+
+            log.info("<<< Invoice reconciled from Fakturownia. invoiceId={}, orderId={}, externalId={}",
+                    localInvoice.getId(), localInvoice.getOrderId(), externalInvoice.id());
+
+            return Optional.of(new InvoiceIssueResult.Issued(localInvoice.getId()));
+        }
+
+        if (matchingInvoices.size() > 1) {
+            invoiceTransactionBoundary.markInvoiceAsDuplicated(localInvoice);
+
+            log.warn("!!! Duplicate invoice detected in Fakturownia after reconciliation. invoiceId={}, orderId={}, matchingExternalIds={}",
+                    localInvoice.getId(),
+                    localInvoice.getOrderId(),
+                    matchingInvoices.stream().map(FakturowniaGetInvoiceDto::id).toList());
+
+            return Optional.of(new InvoiceIssueResult.Duplicated(localInvoice.getId()));
+        }
+
+        return Optional.empty();
+    }
+
+    private boolean isSameBusinessInvoice(Invoice localInvoice, FakturowniaGetInvoiceDto externalInvoice) {
+        return equalsNormalized(localInvoice.getOrderId().toString(), externalInvoice.orderId());
+    }
+
+    private boolean equalsNormalized(String left, String right) {
+        return Objects.equals(simpleNormalize(left), simpleNormalize(right));
+    }
+
+    private String simpleNormalize(String value) {
+        if (value == null) {
+            return null;
+        }
+        return value.trim().toUpperCase();
+    }
+
+    private Optional<InvoiceIssueResult> recoverIfExists(Invoice invoice, String orderId) {
+        return reconcileFromExisting(invoice, taxSystemPort.findByOrderId(orderId));
+    }
+
+    private InvoiceIssueResult issueWithRecovery(Invoice invoice, String orderId) {
+        try {
+            String externalId = taxSystemPort.issueInvoice(invoice);
+            invoiceTransactionBoundary.markInvoiceAsIssued(invoice, externalId);
+
+            log.info("<<< Invoice issued. invoiceId={}, orderId={}, externalId={}",
+                    invoice.getId(), invoice.getOrderId(), externalId);
+
+            return new InvoiceIssueResult.Issued(invoice.getId());
+        } catch (RuntimeException exception) {
+            return recoverAfterIssueFailure(invoice, orderId, exception);
+        }
+    }
+
+    private InvoiceIssueResult recoverAfterIssueFailure(
+            Invoice invoice,
+            String orderId,
+            RuntimeException issueException
+    ) {
+        return reconcileFromExisting(invoice, taxSystemPort.findByOrderId(orderId))
+                .orElseGet(() -> {
+                    invoiceTransactionBoundary.markIssueUnknown(invoice);
+                    log.warn("!!! Invoice visibility in fakturownia pending. invoiceId={}, orderId={}",
+                            invoice.getId(), invoice.getOrderId(), issueException);
+                    return new InvoiceIssueResult.PendingConfirmation(invoice.getId());
+                });
     }
 
     /**

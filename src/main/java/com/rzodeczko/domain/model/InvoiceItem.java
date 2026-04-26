@@ -1,5 +1,7 @@
 package com.rzodeczko.domain.model;
 
+import com.rzodeczko.domain.vo.TaxRate;
+
 import java.math.BigDecimal;
 
 /**
@@ -8,7 +10,8 @@ import java.math.BigDecimal;
 public record InvoiceItem(
         String name,
         int quantity,
-        BigDecimal unitPrice) {
+        BigDecimal unitPrice,
+        TaxRate taxRate) {
     public InvoiceItem {
         if (quantity <= 0) {
             throw new IllegalArgumentException("Quantity must be positive");
@@ -17,5 +20,13 @@ public record InvoiceItem(
         if (unitPrice == null || unitPrice.compareTo(BigDecimal.ZERO) <= 0) {
             throw new IllegalArgumentException("Unit price must be positive");
         }
+
+        if (taxRate == null) {
+            throw new IllegalArgumentException("Tax rate must not be null");
+        }
+    }
+
+    public InvoiceItem(String name, int quantity, BigDecimal unitPrice) {
+        this(name, quantity, unitPrice, TaxRate.of(23));
     }
 }

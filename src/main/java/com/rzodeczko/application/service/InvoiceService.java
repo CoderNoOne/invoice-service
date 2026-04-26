@@ -3,6 +3,7 @@ package com.rzodeczko.application.service;
 import com.rzodeczko.application.port.input.GenerateInvoiceCommand;
 import com.rzodeczko.domain.model.Invoice;
 import com.rzodeczko.domain.model.InvoiceItem;
+import com.rzodeczko.domain.vo.TaxRate;
 import com.rzodeczko.domain.repository.InvoiceRepository;
 
 import java.util.List;
@@ -27,7 +28,12 @@ public class InvoiceService {
         List<InvoiceItem> items = command
                 .items()
                 .stream()
-                .map(i -> new InvoiceItem(i.name(), i.quantity(), i.price()))
+                .map(i -> {
+                    if (i.taxRate() != null) {
+                        return new InvoiceItem(i.name(), i.quantity(), i.price(), TaxRate.of(i.taxRate()));
+                    }
+                    return new InvoiceItem(i.name(), i.quantity(), i.price());
+                })
                 .toList();
         return new Invoice(
                 UUID.randomUUID(),

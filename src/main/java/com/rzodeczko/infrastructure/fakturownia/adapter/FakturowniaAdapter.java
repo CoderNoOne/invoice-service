@@ -33,6 +33,7 @@ import java.util.List;
  *     <li>Issue invoices by mapping domain {@link com.rzodeczko.domain.model.Invoice} to Fakturownia API requests.</li>
  *     <li>Retrieve invoice PDFs by external invoice ID.</li>
  *     <li>Translate Fakturownia API errors to domain-specific exceptions.</li>
+ *     <li>Handles different tax rates per position using the TaxRate value object.</li>
  * </ul>
  *
  *
@@ -153,7 +154,7 @@ public class FakturowniaAdapter implements TaxSystemPort {
                 .stream()
                 .map(item -> new PositionDto(
                         item.name(),
-                        23,
+                        item.taxRate().intValue(),
                         item.quantity(),
                         item.unitPrice().multiply(BigDecimal.valueOf(item.quantity()))
                 ))
