@@ -1,7 +1,8 @@
 package com.rzodeczko.application.port.input;
-import java.util.UUID;
+
+import com.rzodeczko.infrastructure.usecase.dto.InvoiceIssueResult;
 
 
 public interface GenerateInvoiceUseCase {
-    UUID generate(GenerateInvoiceCommand command);
+    InvoiceIssueResult generate(GenerateInvoiceCommand command);
 }

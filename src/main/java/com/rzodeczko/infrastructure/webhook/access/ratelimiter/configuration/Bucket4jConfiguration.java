@@ -16,9 +16,15 @@ import org.springframework.context.annotation.Configuration;
 
 import java.time.Duration;
 
+/**
+ * Configures Redis-backed Bucket4j rate limiting.
+ */
 @Configuration
 public class Bucket4jConfiguration {
 
+    /**
+     * Creates the Redis client used by Bucket4j.
+     */
     @Bean(destroyMethod = "shutdown")
     RedisClient redisClient(RedisProperties redisProperties) {
         return RedisClient.create(
@@ -29,11 +35,17 @@ public class Bucket4jConfiguration {
         );
     }
 
+    /**
+     * Creates the Redis connection used for bucket state storage.
+     */
     @Bean(destroyMethod = "close")
     StatefulRedisConnection<String, byte[]> redisConnection(RedisClient redisClient) {
         return redisClient.connect(RedisCodec.of(StringCodec.UTF8, ByteArrayCodec.INSTANCE));
     }
 
+    /**
+     * Creates the Bucket4j proxy manager backed by Redis.
+     */
     @Bean
     ProxyManager<String> proxyManager(StatefulRedisConnection<String, byte[]> redisConnection) {
         ClientSideConfig clientSideConfig = ClientSideConfig.getDefault()

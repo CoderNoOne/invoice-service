@@ -13,6 +13,7 @@ public interface JpaInvoiceRepository extends JpaRepository<InvoiceEntity, UUID>
     boolean existsByOrderId(UUID orderId);
 
     Optional<InvoiceEntity> findByExternalId(String externalId);
+    Optional<InvoiceEntity> findByOrderId(UUID orderId);
 
     @Query("select i.pdfContent from InvoiceEntity i where i.id = :id")
     Optional<byte[]> findPdfContentById(@Param("id") UUID id);

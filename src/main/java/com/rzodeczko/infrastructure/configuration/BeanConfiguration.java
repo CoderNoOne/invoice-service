@@ -3,8 +3,9 @@ package com.rzodeczko.infrastructure.configuration;
 import com.rzodeczko.application.service.InvoiceService;
 import com.rzodeczko.domain.repository.InvoiceRepository;
 import com.rzodeczko.infrastructure.configuration.properties.FakturowniaProperties;
+import com.rzodeczko.infrastructure.configuration.properties.ReconciliationJobsProperties;
 import com.rzodeczko.infrastructure.configuration.properties.RedisProperties;
-import com.rzodeczko.infrastructure.configuration.properties.WebhookClientsConfig;
+import com.rzodeczko.infrastructure.configuration.properties.WebhookClientsProperties;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.boot.restclient.RestClientCustomizer;
 import org.springframework.context.annotation.Bean;
@@ -16,7 +17,12 @@ import java.time.Duration;
 import java.util.concurrent.Executors;
 
 @Configuration
-@EnableConfigurationProperties({FakturowniaProperties.class, WebhookClientsConfig.class, RedisProperties.class})
+@EnableConfigurationProperties({
+        FakturowniaProperties.class,
+        WebhookClientsProperties.class,
+        RedisProperties.class,
+        ReconciliationJobsProperties.class
+})
 public class BeanConfiguration {
 
 

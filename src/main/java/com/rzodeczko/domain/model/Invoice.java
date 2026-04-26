@@ -17,13 +17,7 @@ public class Invoice {
     private final List<InvoiceItem> items;
 
     public Invoice(UUID id, UUID orderId, String taxId, String buyerName, List<InvoiceItem> items) {
-        this.id = id;
-        this.orderId = orderId;
-        this.taxId = taxId;
-        this.buyerName = buyerName;
-        this.items = items != null ? List.copyOf(items) : Collections.emptyList();
-        this.status = InvoiceStatus.DRAFT;
-        validate();
+        this(id, orderId, taxId, buyerName, null, InvoiceStatus.DRAFT, items);
     }
 
     private Invoice(
@@ -42,8 +36,8 @@ public class Invoice {
         this.externalId = externalId;
         this.status = status;
         this.items = items != null ? List.copyOf(items) : Collections.emptyList();
+        validate();
     }
-
 
     public static Invoice restore(
             UUID id,
@@ -57,16 +51,74 @@ public class Invoice {
         return new Invoice(id, orderId, taxId, buyerName, externalId, status, items);
     }
 
-    public void markAsIssued(String externalId) {
-        if (this.status != InvoiceStatus.DRAFT) {
-            throw new IllegalStateException("Invoice is already marked as issued");
+    public void markAsIssuing() {
+        if (this.status == InvoiceStatus.ISSUED) {
+            throw new IllegalStateException("Invoice cannot be marked as issuing from status " + this.status);
         }
+        this.status = InvoiceStatus.ISSUING;
+    }
+
+    public void markAsIssued(String externalId) {
+        if (this.status != InvoiceStatus.DRAFT && this.status != InvoiceStatus.ISSUING) {
+            throw new IllegalStateException("Invoice cannot be marked as issued from status " + this.status);
+        }
+        if (externalId == null || externalId.isBlank()) {
+            throw new IllegalArgumentException("externalId must not be blank");
+        }
+
         this.externalId = externalId;
         this.status = InvoiceStatus.ISSUED;
     }
 
+    public void markAsIssueUnknown() {
+        if (this.status != InvoiceStatus.ISSUING) {
+            throw new IllegalStateException("Invoice cannot be marked as failed from status " + this.status);
+        }
+        this.externalId = null;
+        this.status = InvoiceStatus.UNKNOWN;
+    }
+
     public boolean isIssued() {
-        return this.status == InvoiceStatus.ISSUED && externalId != null;
+        return this.status == InvoiceStatus.ISSUED;
+    }
+
+    public boolean isIssuing() {
+        return this.status == InvoiceStatus.ISSUING;
+    }
+
+    public boolean isDraft() {
+        return this.status == InvoiceStatus.DRAFT;
+    }
+
+    public boolean isIssueUnknown() {
+        return this.status == InvoiceStatus.UNKNOWN;
+    }
+
+    private void validate() {
+        if (id == null) {
+            throw new IllegalArgumentException("Invoice ID required");
+        }
+        if (orderId == null) {
+            throw new IllegalArgumentException("Order ID required");
+        }
+        if (items.isEmpty()) {
+            throw new IllegalStateException("Invoice must contain at least one item");
+        }
+        if (taxId == null || taxId.isBlank()) {
+            throw new IllegalArgumentException("Tax ID required");
+        }
+        if (buyerName == null || buyerName.isBlank()) {
+            throw new IllegalArgumentException("Buyer name required");
+        }
+        if (status == null) {
+            throw new IllegalArgumentException("Invoice status required");
+        }
+        if (status == InvoiceStatus.ISSUED && (externalId == null || externalId.isBlank())) {
+            throw new IllegalStateException("Issued invoice must have externalId");
+        }
+        if (status != InvoiceStatus.ISSUED && externalId != null) {
+            throw new IllegalStateException("Only issued invoice can have externalId");
+        }
     }
 
     public UUID getId() {
@@ -97,17 +149,16 @@ public class Invoice {
         return items;
     }
 
-    private void validate() {
-        if (items == null || items.isEmpty()) {
-            throw new IllegalStateException("Invoice must contain at least one item");
+    public void markAsDuplicated() {
+        if (this.status != InvoiceStatus.ISSUING) {
+            throw new IllegalStateException("Invoice cannot be marked as duplicated from status " + this.status);
         }
+        this.externalId = null;
+        this.status = InvoiceStatus.DUPLICATED;
+    }
 
-        if (taxId == null || taxId.isBlank()) {
-            throw new IllegalArgumentException("Tax ID required");
-        }
-
-        if (buyerName == null || buyerName.isBlank()) {
-            throw new IllegalArgumentException("Buyer name required");
-        }
+    public boolean isDuplicated() {
+        return this.status == InvoiceStatus.DUPLICATED;
     }
 }
+

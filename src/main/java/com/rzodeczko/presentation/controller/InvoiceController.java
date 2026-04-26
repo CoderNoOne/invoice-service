@@ -5,13 +5,14 @@ import com.rzodeczko.application.port.input.GenerateInvoiceCommand;
 import com.rzodeczko.application.port.input.GenerateInvoiceUseCase;
 import com.rzodeczko.application.port.input.GetInvoicePdfUseCase;
 import com.rzodeczko.application.port.input.ItemCommand;
+import com.rzodeczko.infrastructure.usecase.dto.InvoiceIssueResult;
 import com.rzodeczko.presentation.dto.CreateInvoiceRequestDto;
 import com.rzodeczko.presentation.dto.CreateInvoiceResponseDto;
+import com.rzodeczko.presentation.mapper.CreateInvoiceResponseMapper;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -36,13 +37,15 @@ import java.util.UUID;
 public class InvoiceController {
     private final GenerateInvoiceUseCase generateInvoiceUseCase;
     private final GetInvoicePdfUseCase getInvoicePdfUseCase;
+    private final CreateInvoiceResponseMapper createInvoiceResponseMapper;
 
     @PostMapping
     public ResponseEntity<CreateInvoiceResponseDto> createInvoice(
             @RequestBody @Valid CreateInvoiceRequestDto request) {
-        log.info("Received create invoice request: {}", request);
-        var items = request
-                .items()
+
+        log.info(">>> Received create invoice request. orderId={}", request.orderId());
+
+        var items = request.items()
                 .stream()
                 .map(i -> new ItemCommand(i.name(), i.quantity(), i.price()))
                 .toList();
@@ -54,10 +57,8 @@ public class InvoiceController {
                 items
         );
 
-        UUID invoiceId = generateInvoiceUseCase.generate(command);
-        return ResponseEntity
-                .status(HttpStatus.CREATED)
-                .body(new CreateInvoiceResponseDto(invoiceId));
+        InvoiceIssueResult result = generateInvoiceUseCase.generate(command);
+        return createInvoiceResponseMapper.toResponse(result);
     }
 
     /**

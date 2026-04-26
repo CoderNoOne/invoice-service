@@ -25,19 +25,20 @@ public class WebhookController {
     public ResponseEntity<Void> handleInvoiceUpdated(
             @RequestBody FakturowniaWebhookDto payload
     ) {
-        log.info(">>> Webhook for invoice updated: payload Id={}", payload.id());
+        log.info(">>> Webhook /fakturownia/invoices/update invoked: payload Id={}", payload.id());
 
         if (
                 payload.deal() == null ||
                         payload.deal().externalIds() == null ||
                         !payload.deal().externalIds().containsKey("fakturownia")
         ) {
-            log.info("<<< Webhook without externalId: fakturowniaId={}", payload.id());
+            log.info("<<< Quitting webhook /fakturownia/invoices/update, reason - no externalId:=fakturowniaId={}", payload.id());
             return ResponseEntity.ok().build();
         }
 
         Long externalId = payload.deal().externalIds().get("fakturownia");
         handleInvoiceWebhookUseCase.handle(String.valueOf(externalId));
+        log.info("<<< Webhook handled /fakturownia/invoices/update  externalId: fakturowniaId={}", payload.id());
         return ResponseEntity.ok().build();
     }
 }

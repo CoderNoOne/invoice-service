@@ -23,13 +23,23 @@ public class InvoiceTransactionBoundary {
     }
 
     @Transactional
-    public void saveNewInvoice(Invoice invoice) {
-        invoiceService.saveNewInvoice(invoice);
+    public Optional<Invoice> findByOrderId(UUID orderId) {
+        return invoiceRepository.findByOrderId(orderId);
+    }
+
+    @Transactional
+    public Invoice saveNewInvoice(Invoice invoice) {
+        return invoiceService.saveNewInvoice(invoice);
     }
 
     @Transactional
     public void markInvoiceAsIssued(Invoice invoice, String externalId) {
         invoiceService.markInvoiceAsIssued(invoice, externalId);
+    }
+
+    @Transactional
+    public void markAsIssuing(Invoice invoice) {
+        invoiceService.markInvoiceAsIssuing(invoice);
     }
 
     @Transactional(readOnly = true)
@@ -50,5 +60,13 @@ public class InvoiceTransactionBoundary {
     @Transactional(readOnly = true)
     public Optional<Invoice> findByExternalId(String externalId) {
         return invoiceRepository.findByExternalId(externalId);
+    }
+
+    public void markIssueUnknown(Invoice invoice) {
+        invoiceService.markInvoiceAsUnknown(invoice);
+    }
+
+    public void markInvoiceAsDuplicated(Invoice invoice) {
+        invoiceService.markInvoiceAsDuplicated(invoice);
     }
 }

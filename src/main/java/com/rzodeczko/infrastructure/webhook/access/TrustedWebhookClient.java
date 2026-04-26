@@ -6,6 +6,9 @@ import lombok.RequiredArgsConstructor;
 import java.util.Arrays;
 import java.util.Optional;
 
+/**
+ * Supported trusted webhook clients.
+ */
 @RequiredArgsConstructor
 @Getter
 public enum TrustedWebhookClient {

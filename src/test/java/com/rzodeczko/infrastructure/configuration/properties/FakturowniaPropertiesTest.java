@@ -20,15 +20,15 @@ class FakturowniaPropertiesTest {
 
     @Test
     void equals_shouldReturnTrueForSameValues() {
-        FakturowniaProperties props1 = new FakturowniaProperties("url", "token");
-        FakturowniaProperties props2 = new FakturowniaProperties("url", "token");
+        FakturowniaProperties props1 = new FakturowniaProperties("url", "sharedSecret");
+        FakturowniaProperties props2 = new FakturowniaProperties("url", "sharedSecret");
         assertEquals(props1, props2);
     }
 
     @Test
     void hashCode_shouldBeSameForSameValues() {
-        FakturowniaProperties props1 = new FakturowniaProperties("url", "token");
-        FakturowniaProperties props2 = new FakturowniaProperties("url", "token");
+        FakturowniaProperties props1 = new FakturowniaProperties("url", "sharedSecret");
+        FakturowniaProperties props2 = new FakturowniaProperties("url", "sharedSecret");
         assertEquals(props1.hashCode(), props2.hashCode());
     }
 }

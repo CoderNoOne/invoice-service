@@ -38,12 +38,27 @@ public class InvoiceService {
         );
     }
 
-    public void saveNewInvoice(Invoice invoice) {
-        invoiceRepository.save(invoice);
+    public Invoice saveNewInvoice(Invoice invoice) {
+        return invoiceRepository.save(invoice);
     }
 
     public void markInvoiceAsIssued(Invoice invoice, String externalId) {
         invoice.markAsIssued(externalId);
+        invoiceRepository.save(invoice);
+    }
+
+    public void markInvoiceAsIssuing(Invoice invoice) {
+        invoice.markAsIssuing();
+        invoiceRepository.save(invoice);
+    }
+
+    public void markInvoiceAsUnknown(Invoice invoice) {
+        invoice.markAsIssueUnknown();
+        invoiceRepository.save(invoice);
+    }
+
+    public void markInvoiceAsDuplicated(Invoice invoice) {
+        invoice.markAsDuplicated();
         invoiceRepository.save(invoice);
     }
 }

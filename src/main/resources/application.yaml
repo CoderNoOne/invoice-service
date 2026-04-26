@@ -34,26 +34,29 @@ fakturownia:
   url: ${INVOICES_URL:http://localhost:3000}
   token: ${INVOICES_TOKEN:test-token}
 
-webhooks-tokens:
-      update-invoice-api:
-        fakturownia: ${INVOICE_SERVICE_WEBHOOK_TOKEN:secret}
-
-webhook:
-  clients:
-    fakturownia:
-      enabled: true # Set to false to temporarily disable this client if it becomes problematic
-      token: ${INVOICE_SERVICE_WEBHOOK_TOKEN:secret}
-      requests-per-minute: 60
-
-
-management:
-  endpoints:
-    web:
-      exposure:
-        include: health
 
 springdoc:
   api-docs:
     enabled: ${SPRINGDOC_API_DOCS_SWAGGER_ENABLED:false}
   swagger-ui:
     enabled: ${SPRINGDOC_API_DOCS_SWAGGER_ENABLED:false}
+
+reconciliation:
+  jobs:
+    duplicate-invoice-remediation:
+      enabled: true
+    unknown-invoice-recovery:
+      enabled: true
+
+webhook:
+  clients:
+    fakturownia:
+      enabled: true # deafult is true, set to false to disable this client if it becomes problematic
+      shared-secret: ${INVOICE_SERVICE_WEBHOOK_TOKEN:secret} # Must match the token configured in Fakturownia webhook integration panel for webhook authentication
+      requests-per-minute-limit: 60 # Adjust as needed to prevent abuse, set to 0 for no limit
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health

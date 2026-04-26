@@ -10,7 +10,7 @@ import java.util.UUID;
  * Repository interface for managing Invoice entities in the persistence layer.
  */
 public interface InvoiceRepository {
-    void save(Invoice invoice);
+    Invoice save(Invoice invoice);
 
     boolean existsByOrderId(UUID orderId);
 
@@ -22,4 +22,5 @@ public interface InvoiceRepository {
 
     Optional<Invoice> findByExternalId(String externalId);
 
+    Optional<Invoice> findByOrderId(UUID orderId);
 }

@@ -11,7 +11,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
-import tools.jackson.databind.cfg.MapperBuilder;
 
 import java.util.Optional;
 import java.util.UUID;
@@ -22,11 +21,10 @@ public class JpaInvoiceRepositoryAdapter implements InvoiceRepository {
 
     private final JpaInvoiceRepository jpaInvoiceRepository;
     private final InvoiceMapper invoiceMapper;
-    private final MapperBuilder mapperBuilder;
 
     @Override
     @Transactional
-    public void save(Invoice invoice) {
+    public Invoice save(Invoice invoice) {
         try {
             InvoiceEntity entity = jpaInvoiceRepository
                     .findById(invoice.getId())
@@ -37,7 +35,7 @@ public class JpaInvoiceRepositoryAdapter implements InvoiceRepository {
                     })
                     .orElseGet(() -> invoiceMapper.toEntity(invoice));
 
-            jpaInvoiceRepository.saveAndFlush(entity);
+            return invoiceMapper.toDomain(jpaInvoiceRepository.saveAndFlush(entity));
         } catch (ObjectOptimisticLockingFailureException e) {
             throw new InvoiceConcurrentModificationException(invoice.getId());
         }
@@ -80,5 +78,11 @@ public class JpaInvoiceRepositoryAdapter implements InvoiceRepository {
 
     }
 
-
+    @Override
+    @Transactional(readOnly = true)
+    public Optional<Invoice> findByOrderId(UUID orderId) {
+        return jpaInvoiceRepository
+                .findByOrderId(orderId)
+                .map(invoiceMapper::toDomain);
+    }
 }

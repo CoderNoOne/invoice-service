@@ -5,10 +5,12 @@ import com.rzodeczko.application.exception.ExternalTaxSystemException;
 import com.rzodeczko.application.port.output.TaxSystemPort;
 import com.rzodeczko.domain.model.Invoice;
 import com.rzodeczko.infrastructure.configuration.properties.FakturowniaProperties;
-import com.rzodeczko.infrastructure.fakturownia.dto.FakturowniaResponseDto;
-import com.rzodeczko.infrastructure.fakturownia.dto.InvoiceDto;
-import com.rzodeczko.infrastructure.fakturownia.dto.InvoiceWrapperDto;
+import com.rzodeczko.infrastructure.fakturownia.dto.FakturowniaCreateInvoiceResponseDto;
+import com.rzodeczko.infrastructure.fakturownia.dto.CreateInvoiceDto;
+import com.rzodeczko.infrastructure.fakturownia.dto.CreateInvoiceWrapperDto;
 import com.rzodeczko.infrastructure.fakturownia.dto.PositionDto;
+import com.rzodeczko.presentation.dto.FakturowniaGetInvoiceDto;
+import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
@@ -53,7 +55,6 @@ public class FakturowniaAdapter implements TaxSystemPort {
     @Override
     public String issueInvoice(Invoice invoice) {
         try {
-            // https://github.com/fakturownia/api
             var response = restClient.post()
                     .uri(uri -> uri
                             .path("/invoices.json")
@@ -71,7 +72,7 @@ public class FakturowniaAdapter implements TaxSystemPort {
                                 "Fakturownia unavailable. status=" + res.getStatusCode()
                         );
                     })
-                    .body(FakturowniaResponseDto.class);
+                    .body(FakturowniaCreateInvoiceResponseDto.class);
 
             if (response == null || response.id() == null) {
                 throw new ExternalTaxSystemException(
@@ -116,7 +117,36 @@ public class FakturowniaAdapter implements TaxSystemPort {
         }
     }
 
-    private InvoiceWrapperDto mapToRequest(Invoice invoice) {
+    @Override
+    public List<FakturowniaGetInvoiceDto> findByOrderId(String orderId) {
+        try {
+            return restClient.get()
+                    .uri(uri -> uri
+                            .path("/invoices")
+                            .queryParam("api_token", fakturowniaProperties.token())
+                            .queryParam("oid", orderId)
+                            .build())
+                    .retrieve()
+                    .onStatus(HttpStatusCode::is4xxClientError, (req, res) -> {
+                        throw new IllegalArgumentException(
+                                "Fakturownia rejected request when fetching by orderId=" + orderId + ". status=" + res.getStatusCode()
+                        );
+                    })
+                    .onStatus(HttpStatusCode::is5xxServerError, (req, res) -> {
+                        throw new ExternalTaxSystemException(
+                                "Fakturownia unavailable when fetching invoices=" + res.getStatusCode());
+                    })
+                    .body(new ParameterizedTypeReference<>() {
+                    });
+        } catch (ExternalTaxSystemException | IllegalArgumentException e) {
+            throw e;
+        } catch (RestClientException e) {
+            throw new ExternalTaxSystemException(
+                    "Communication error with Fakturownia when fetching invoices. orderId=" + orderId, e);
+        }
+    }
+
+    private CreateInvoiceWrapperDto mapToRequest(Invoice invoice) {
         LocalDate now = LocalDate.now();
         List<PositionDto> positions = invoice
                 .getItems()
@@ -129,13 +159,14 @@ public class FakturowniaAdapter implements TaxSystemPort {
                 ))
                 .toList();
 
-        return new InvoiceWrapperDto(new InvoiceDto(
+        return new CreateInvoiceWrapperDto(new CreateInvoiceDto(
                 "vat",
                 now.toString(),
                 now.toString(),
                 now.plusDays(7).toString(),
                 invoice.getBuyerName(),
                 invoice.getTaxId(),
+                invoice.getOrderId().toString(),
                 positions
         ));
     }

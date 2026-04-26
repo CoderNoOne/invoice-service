@@ -13,6 +13,9 @@ import org.springframework.stereotype.Component;
 import java.util.Arrays;
 import java.util.Optional;
 
+/**
+ * Verifies webhook access and rate limits before secured handlers are invoked.
+ */
 @Aspect
 @Component
 @RequiredArgsConstructor
@@ -21,6 +24,9 @@ public class WebhookSecurityAspect {
     private final WebhookInvoiceUpdateAccessVerifier accessVerifier;
     private final ClientRateLimiter bucket4jRateLimiter;
 
+    /**
+     * Validates the webhook client, shared secret, and rate limit for the incoming payload.
+     */
     @Before("@annotation(webhookSecured) && args(payload,..)")
     public void verifyAccessAndRateLimit(
             WebhookSecured webhookSecured,
