@@ -17,4 +17,5 @@ public class InvoiceItemEmbeddable {
     private String name;
     private int quantity;
     private BigDecimal unitPrice;
+    private BigDecimal taxRate;
 }

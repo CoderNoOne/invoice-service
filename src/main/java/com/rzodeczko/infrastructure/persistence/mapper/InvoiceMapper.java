@@ -4,6 +4,7 @@ package com.rzodeczko.infrastructure.persistence.mapper;
 import com.rzodeczko.domain.model.Invoice;
 import com.rzodeczko.domain.model.InvoiceItem;
 import com.rzodeczko.domain.model.InvoiceStatus;
+import com.rzodeczko.domain.vo.TaxRate;
 import com.rzodeczko.infrastructure.persistence.entity.InvoiceEntity;
 import com.rzodeczko.infrastructure.persistence.entity.InvoiceItemEmbeddable;
 import org.springframework.stereotype.Component;
@@ -16,7 +17,7 @@ public class InvoiceMapper {
         List<InvoiceItemEmbeddable> entityItems = domain
                 .getItems()
                 .stream()
-                .map(i -> new InvoiceItemEmbeddable(i.name(), i.quantity(), i.unitPrice()))
+                .map(i -> new InvoiceItemEmbeddable(i.name(), i.quantity(), i.unitPrice(), i.taxRate().value()))
                 .toList();
 
         return InvoiceEntity
@@ -35,7 +36,7 @@ public class InvoiceMapper {
         List<InvoiceItem> items = entity
                 .getItems()
                 .stream()
-                .map(i -> new InvoiceItem(i.getName(), i.getQuantity(), i.getUnitPrice()))
+                .map(i -> new InvoiceItem(i.getName(), i.getQuantity(), i.getUnitPrice(), TaxRate.of(i.getTaxRate())))
                 .toList();
 
         return Invoice.restore(
