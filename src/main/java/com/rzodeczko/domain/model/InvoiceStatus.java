@@ -7,6 +7,7 @@ public enum InvoiceStatus {
     DRAFT,
     ISSUING,
     ISSUED,
-    DUPLICATED,
-    UNKNOWN
+    ISSUE_UNKNOWN,
+    ISSUE_FAILED,
+    RECONCILIATION_REQUIRED
 }

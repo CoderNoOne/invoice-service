@@ -3,6 +3,7 @@ package com.rzodeczko.domain.repository;
 
 import com.rzodeczko.domain.model.Invoice;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -23,4 +24,6 @@ public interface InvoiceRepository {
     Optional<Invoice> findByExternalId(String externalId);
 
     Optional<Invoice> findByOrderId(UUID orderId);
+
+    List<Invoice> findIssueUnknownBatch(int limit);
 }

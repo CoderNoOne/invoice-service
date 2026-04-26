@@ -3,8 +3,8 @@ package com.rzodeczko.application.service;
 import com.rzodeczko.application.port.input.GenerateInvoiceCommand;
 import com.rzodeczko.domain.model.Invoice;
 import com.rzodeczko.domain.model.InvoiceItem;
-import com.rzodeczko.domain.vo.TaxRate;
 import com.rzodeczko.domain.repository.InvoiceRepository;
+import com.rzodeczko.domain.vo.TaxRate;
 
 import java.util.List;
 import java.util.UUID;
@@ -63,8 +63,17 @@ public class InvoiceService {
         invoiceRepository.save(invoice);
     }
 
-    public void markInvoiceAsDuplicated(Invoice invoice) {
-        invoice.markAsDuplicated();
+    public void markIssueFailed(Invoice invoice) {
+        invoice.markAsIssueFailed();
         invoiceRepository.save(invoice);
+    }
+
+    public void markReconciliationRequired(Invoice invoice) {
+        invoice.markAsReconciliationRequired();
+        invoiceRepository.save(invoice);
+    }
+
+    public List<Invoice> findIssueUnknownBatch(int limit) {
+        return invoiceRepository.findIssueUnknownBatch(limit);
     }
 }

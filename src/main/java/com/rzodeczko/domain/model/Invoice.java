@@ -70,9 +70,12 @@ public class Invoice {
         this.status = InvoiceStatus.ISSUED;
     }
 
+    public boolean isReconciliationRequired() {
+        return status == InvoiceStatus.RECONCILIATION_REQUIRED;
+    }
+
     public void markAsIssueUnknown() {
-        this.externalId = null;
-        this.status = InvoiceStatus.UNKNOWN;
+        this.status = InvoiceStatus.ISSUE_UNKNOWN;
     }
 
     public boolean isIssued() {
@@ -88,7 +91,7 @@ public class Invoice {
     }
 
     public boolean isIssueUnknown() {
-        return this.status == InvoiceStatus.UNKNOWN;
+        return this.status == InvoiceStatus.ISSUING;
     }
 
     private void validate() {
@@ -146,16 +149,13 @@ public class Invoice {
         return items;
     }
 
-    public void markAsDuplicated() {
-        if (this.status != InvoiceStatus.ISSUING) {
-            throw new IllegalStateException("Invoice cannot be marked as duplicated from status " + this.status);
-        }
-        this.externalId = null;
-        this.status = InvoiceStatus.DUPLICATED;
+    public void markAsIssueFailed() {
+        this.status = InvoiceStatus.ISSUE_FAILED;
     }
 
-    public boolean isDuplicated() {
-        return this.status == InvoiceStatus.DUPLICATED;
+    public void markAsReconciliationRequired() {
+        this.status = InvoiceStatus.RECONCILIATION_REQUIRED;
+        externalId = null;
     }
 }
 

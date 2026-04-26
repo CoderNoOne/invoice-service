@@ -1,11 +1,14 @@
 package com.rzodeczko.infrastructure.persistence.repository;
 
+import com.rzodeczko.domain.model.InvoiceStatus;
 import com.rzodeczko.infrastructure.persistence.entity.InvoiceEntity;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -13,6 +16,7 @@ public interface JpaInvoiceRepository extends JpaRepository<InvoiceEntity, UUID>
     boolean existsByOrderId(UUID orderId);
 
     Optional<InvoiceEntity> findByExternalId(String externalId);
+
     Optional<InvoiceEntity> findByOrderId(UUID orderId);
 
     @Query("select i.pdfContent from InvoiceEntity i where i.id = :id")
@@ -21,4 +25,6 @@ public interface JpaInvoiceRepository extends JpaRepository<InvoiceEntity, UUID>
     @Modifying
     @Query("update InvoiceEntity i set i.pdfContent = :pdf where i.id = :id")
     void updatePdfContent(@Param("id") UUID id, @Param("pdf") byte[] pdf);
+
+    List<InvoiceEntity> findByStatusOrderByCreatedAtAsc(InvoiceStatus status, PageRequest pageRequest);
 }

@@ -8,6 +8,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -66,7 +67,16 @@ public class InvoiceTransactionBoundary {
         invoiceService.markInvoiceAsUnknown(invoice);
     }
 
-    public void markInvoiceAsDuplicated(Invoice invoice) {
-        invoiceService.markInvoiceAsDuplicated(invoice);
+    public void markIssueFailed(Invoice invoice) {
+        invoiceService.markIssueFailed(invoice);
+    }
+
+    public void markReconciliationRequired(Invoice invoice) {
+        invoiceService.markReconciliationRequired(invoice);
+    }
+
+    @Transactional
+    public List<Invoice> findIssueUnknownBatch(int batchSize) {
+        return invoiceService.findIssueUnknownBatch(batchSize);
     }
 }

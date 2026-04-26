@@ -1,18 +1,20 @@
 package com.rzodeczko.infrastructure.fakturownia.adapter;
 
-
-import com.rzodeczko.application.exception.ExternalTaxSystemException;
+import com.rzodeczko.application.exception.TaxSystemPermanentException;
+import com.rzodeczko.application.exception.TaxSystemTemporaryException;
 import com.rzodeczko.application.port.output.TaxSystemPort;
 import com.rzodeczko.domain.model.Invoice;
 import com.rzodeczko.infrastructure.configuration.properties.FakturowniaProperties;
-import com.rzodeczko.infrastructure.fakturownia.dto.FakturowniaCreateInvoiceResponseDto;
 import com.rzodeczko.infrastructure.fakturownia.dto.CreateInvoiceDto;
 import com.rzodeczko.infrastructure.fakturownia.dto.CreateInvoiceWrapperDto;
+import com.rzodeczko.infrastructure.fakturownia.dto.FakturowniaCreateInvoiceResponseDto;
 import com.rzodeczko.infrastructure.fakturownia.dto.PositionDto;
 import com.rzodeczko.presentation.dto.FakturowniaGetInvoiceDto;
 import org.springframework.core.ParameterizedTypeReference;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.stereotype.Component;
+import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
 
@@ -20,26 +22,9 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 
-/**
- * Adapter for integrating with the Fakturownia external tax system API.
- * <p>
- * This class implements the {@link com.rzodeczko.application.port.output.TaxSystemPort} interface
- * and provides methods to issue invoices and retrieve invoice PDFs using the Fakturownia API.
- * It handles communication, error mapping, and request/response transformation between the domain model
- * and the external system.
- * <p>
- * Main responsibilities:
- * <ul>
- *     <li>Issue invoices by mapping domain {@link com.rzodeczko.domain.model.Invoice} to Fakturownia API requests.</li>
- *     <li>Retrieve invoice PDFs by external invoice ID.</li>
- *     <li>Translate Fakturownia API errors to domain-specific exceptions.</li>
- *     <li>Handles different tax rates per position using the TaxRate value object.</li>
- * </ul>
- *
- *
- */
 @Component
 public class FakturowniaAdapter implements TaxSystemPort {
+
     private final RestClient restClient;
     private final FakturowniaProperties fakturowniaProperties;
 
@@ -56,36 +41,36 @@ public class FakturowniaAdapter implements TaxSystemPort {
     @Override
     public String issueInvoice(Invoice invoice) {
         try {
-            var response = restClient.post()
+            var createResponse = restClient.post()
                     .uri(uri -> uri
                             .path("/invoices.json")
                             .queryParam("api_token", fakturowniaProperties.token())
                             .build())
                     .body(mapToRequest(invoice))
                     .retrieve()
-                    .onStatus(HttpStatusCode::is4xxClientError, (req, res) -> {
-                        throw new IllegalArgumentException(
-                                "Fakturownia rejected invoice. status=" + res.getStatusCode()
-                        );
-                    })
-                    .onStatus(HttpStatusCode::is5xxServerError, (req, res) -> {
-                        throw new ExternalTaxSystemException(
-                                "Fakturownia unavailable. status=" + res.getStatusCode()
-                        );
-                    })
+                    .onStatus(HttpStatusCode::isError,
+                            (request, clientResponse) -> handleError(
+                                    clientResponse.getStatusCode(),
+                                    "issueInvoice",
+                                    "orderId=" + invoice.getOrderId()
+                            ))
                     .body(FakturowniaCreateInvoiceResponseDto.class);
 
-            if (response == null || response.id() == null) {
-                throw new ExternalTaxSystemException(
-                        "Fakturownia returned no ID for invoice. orderId=" + invoice.getOrderId());
+            if (createResponse == null || createResponse.id() == null) {
+                throw new TaxSystemTemporaryException(
+                        "Fakturownia returned empty invoice ID. orderId=" + invoice.getOrderId()
+                );
             }
 
-            return String.valueOf(response.id());
-        } catch (ExternalTaxSystemException | IllegalArgumentException e) {
-            throw e;
+            return String.valueOf(createResponse.id());
+        } catch (ResourceAccessException e) {
+            throw new TaxSystemTemporaryException(
+                    "Timeout/connection error during issueInvoice. orderId=" + invoice.getOrderId(), e
+            );
         } catch (RestClientException e) {
-            throw new ExternalTaxSystemException(
-                    "Communication error with Fakturownia. orderId=" + invoice.getOrderId(), e);
+            throw new TaxSystemTemporaryException(
+                    "Rest client error during issueInvoice. orderId=" + invoice.getOrderId(), e
+            );
         }
     }
 
@@ -98,22 +83,22 @@ public class FakturowniaAdapter implements TaxSystemPort {
                             .queryParam("api_token", fakturowniaProperties.token())
                             .build(externalId))
                     .retrieve()
-                    .onStatus(HttpStatusCode::is4xxClientError, (req, res) -> {
-                        throw new IllegalArgumentException(
-                                "Fakturownia: PDF not found for id=" + externalId
-                        );
-                    })
-                    .onStatus(HttpStatusCode::is5xxServerError, (req, res) -> {
-                        throw new ExternalTaxSystemException(
-                                "Fakturownia unavailable when fetching PDF. status=" + res.getStatusCode());
-                    })
+                    .onStatus(HttpStatusCode::isError,
+                            (request, response) -> handleError(
+                                    response.getStatusCode(),
+                                    "getPdf",
+                                    "externalId=" + externalId
+                            ))
                     .body(byte[].class);
-        } catch (ExternalTaxSystemException | IllegalArgumentException e) {
+        } catch (TaxSystemPermanentException | TaxSystemTemporaryException e) {
             throw e;
+        } catch (ResourceAccessException e) {
+            throw new TaxSystemTemporaryException(
+                    "Timeout/connection error during getPdf. externalId=" + externalId, e
+            );
         } catch (RestClientException e) {
-            throw new ExternalTaxSystemException(
-                    "Communication error with Fakturownia when fetching PDF. externalId=" + externalId,
-                    e
+            throw new TaxSystemTemporaryException(
+                    "Rest client error during getPdf. externalId=" + externalId, e
             );
         }
     }
@@ -121,37 +106,91 @@ public class FakturowniaAdapter implements TaxSystemPort {
     @Override
     public List<FakturowniaGetInvoiceDto> findByOrderId(String orderId) {
         try {
-            return restClient.get()
+            List<FakturowniaGetInvoiceDto> invoicesResponse = restClient.get()
                     .uri(uri -> uri
                             .path("/invoices")
                             .queryParam("api_token", fakturowniaProperties.token())
                             .queryParam("oid", orderId)
                             .build())
                     .retrieve()
-                    .onStatus(HttpStatusCode::is4xxClientError, (req, res) -> {
-                        throw new IllegalArgumentException(
-                                "Fakturownia rejected request when fetching by orderId=" + orderId + ". status=" + res.getStatusCode()
-                        );
-                    })
-                    .onStatus(HttpStatusCode::is5xxServerError, (req, res) -> {
-                        throw new ExternalTaxSystemException(
-                                "Fakturownia unavailable when fetching invoices=" + res.getStatusCode());
-                    })
+                    .onStatus(HttpStatusCode::isError,
+                            (request, clientResponse) -> handleError(
+                                    clientResponse.getStatusCode(),
+                                    "findByOrderId",
+                                    "orderId=" + orderId
+                            ))
                     .body(new ParameterizedTypeReference<>() {
                     });
-        } catch (ExternalTaxSystemException | IllegalArgumentException e) {
-            throw e;
+
+            return invoicesResponse == null ? List.of() : invoicesResponse;
+        } catch (ResourceAccessException e) {
+            throw new TaxSystemTemporaryException(
+                    "Timeout/connection error during findByOrderId. orderId=" + orderId, e
+            );
         } catch (RestClientException e) {
-            throw new ExternalTaxSystemException(
-                    "Communication error with Fakturownia when fetching invoices. orderId=" + orderId, e);
+            throw new TaxSystemTemporaryException(
+                    "Rest client error during findByOrderId. orderId=" + orderId, e
+            );
+        }
+    }
+
+    private void handleError(HttpStatusCode statusCode, String operation, String context) {
+        if (!(statusCode instanceof HttpStatus status)) {
+            throw new TaxSystemTemporaryException(
+                    "Unknown HTTP status during " + operation + ". " + context + ", status=" + statusCode
+            );
+        }
+
+        switch (status) {
+            case BAD_REQUEST,
+                 UNAUTHORIZED,
+                 FORBIDDEN,
+                 NOT_FOUND,
+                 METHOD_NOT_ALLOWED,
+                 UNPROCESSABLE_CONTENT -> throw new TaxSystemPermanentException(
+                    "Permanent Fakturownia error during " + operation + ". " + context + ", status=" + status
+            );
+
+            case REQUEST_TIMEOUT,
+                 TOO_MANY_REQUESTS -> throw new TaxSystemTemporaryException(
+                    "Retryable Fakturownia client-side error during " + operation + ". " + context + ", status=" + status
+            );
+
+            case CONFLICT -> throw new TaxSystemPermanentException(
+                    "Conflict during " + operation + ". " + context + ", status=" + status
+            );
+
+            case INTERNAL_SERVER_ERROR,
+                 BAD_GATEWAY,
+                 SERVICE_UNAVAILABLE,
+                 GATEWAY_TIMEOUT -> throw new TaxSystemTemporaryException(
+                    "Temporary Fakturownia server error during " + operation + ". " + context + ", status=" + status
+            );
+
+            default -> {
+                if (status.is4xxClientError()) {
+                    throw new TaxSystemPermanentException(
+                            "Unhandled 4xx during " + operation + ". " + context + ", status=" + status
+                    );
+                }
+
+                if (status.is5xxServerError()) {
+                    throw new TaxSystemTemporaryException(
+                            "Unhandled 5xx during " + operation + ". " + context + ", status=" + status
+                    );
+                }
+
+                throw new TaxSystemTemporaryException(
+                        "Unexpected HTTP status during " + operation + ". " + context + ", status=" + status
+                );
+            }
         }
     }
 
     private CreateInvoiceWrapperDto mapToRequest(Invoice invoice) {
         LocalDate now = LocalDate.now();
-        List<PositionDto> positions = invoice
-                .getItems()
-                .stream()
+
+        List<PositionDto> positions = invoice.getItems().stream()
                 .map(item -> new PositionDto(
                         item.name(),
                         item.taxRate().intValue(),

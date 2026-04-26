@@ -3,15 +3,18 @@ package com.rzodeczko.infrastructure.persistence.repository.adapter;
 
 import com.rzodeczko.application.exception.InvoiceConcurrentModificationException;
 import com.rzodeczko.domain.model.Invoice;
+import com.rzodeczko.domain.model.InvoiceStatus;
 import com.rzodeczko.domain.repository.InvoiceRepository;
 import com.rzodeczko.infrastructure.persistence.entity.InvoiceEntity;
 import com.rzodeczko.infrastructure.persistence.mapper.InvoiceMapper;
 import com.rzodeczko.infrastructure.persistence.repository.JpaInvoiceRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -84,5 +87,15 @@ public class JpaInvoiceRepositoryAdapter implements InvoiceRepository {
         return jpaInvoiceRepository
                 .findByOrderId(orderId)
                 .map(invoiceMapper::toDomain);
+    }
+
+    @Override
+    public List<Invoice> findIssueUnknownBatch(int limit) {
+        return jpaInvoiceRepository.findByStatusOrderByCreatedAtAsc(
+                        InvoiceStatus.ISSUE_UNKNOWN,
+                        PageRequest.of(0, limit)
+                ).stream()
+                .map(invoiceMapper::toDomain)
+                .toList();
     }
 }

@@ -5,7 +5,7 @@ import com.rzodeczko.application.port.input.GenerateInvoiceCommand;
 import com.rzodeczko.application.port.input.GenerateInvoiceUseCase;
 import com.rzodeczko.application.port.input.GetInvoicePdfUseCase;
 import com.rzodeczko.application.port.input.ItemCommand;
-import com.rzodeczko.infrastructure.usecase.dto.InvoiceIssueResult;
+import com.rzodeczko.application.port.input.InvoiceIssueResult;
 import com.rzodeczko.presentation.dto.CreateInvoiceRequestDto;
 import com.rzodeczko.presentation.dto.CreateInvoiceResponseDto;
 import com.rzodeczko.presentation.mapper.CreateInvoiceResponseMapper;
