@@ -71,9 +71,6 @@ public class Invoice {
     }
 
     public void markAsIssueUnknown() {
-        if (this.status != InvoiceStatus.ISSUING) {
-            throw new IllegalStateException("Invoice cannot be marked as failed from status " + this.status);
-        }
         this.externalId = null;
         this.status = InvoiceStatus.UNKNOWN;
     }
