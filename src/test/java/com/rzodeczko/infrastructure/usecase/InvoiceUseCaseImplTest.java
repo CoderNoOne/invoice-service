@@ -28,9 +28,7 @@ import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.BDDMockito.given;
-import static org.mockito.BDDMockito.then;
-import static org.mockito.Mockito.*;
+import static org.mockito.BDDMockito.*;
 
 @DisplayName("InvoiceUseCaseImpl Unit Tests")
 class InvoiceUseCaseImplTest {
@@ -49,10 +47,10 @@ class InvoiceUseCaseImplTest {
         invoiceReconciliationService = mock(InvoiceReconciliationService.class);
         violationClassifier = mock(DataIntegrityViolationClassifier.class);
         useCase = new InvoiceUseCaseImpl(
-                invoiceTransactionBoundary, 
-                invoiceService, 
-                taxSystemPort, 
-                invoiceReconciliationService, 
+                invoiceTransactionBoundary,
+                invoiceService,
+                taxSystemPort,
+                invoiceReconciliationService,
                 violationClassifier
         );
     }
@@ -67,25 +65,44 @@ class InvoiceUseCaseImplTest {
             // given
             UUID orderId = UUID.randomUUID();
             UUID invoiceId = UUID.randomUUID();
+
             GenerateInvoiceCommand command = new GenerateInvoiceCommand(
-                    orderId, "1234567890", "Real Buyer",
-                    List.of(new ItemCommand("Product", 1, BigDecimal.TEN, BigDecimal.valueOf(23))));
-            
+                    orderId,
+                    "1234567890",
+                    "Real Buyer",
+                    List.of(new ItemCommand("Product", 1, BigDecimal.TEN, BigDecimal.valueOf(23)))
+            );
+
             Invoice invoice = Invoice.restore(
-                    invoiceId, orderId, "1234567890", "Real Buyer",
-                    null, InvoiceStatus.DRAFT,
+                    invoiceId,
+                    orderId,
+                    "1234567890",
+                    "Real Buyer",
+                    null,
+                    InvoiceStatus.DRAFT,
                     List.of(new InvoiceItem("Product", 1, BigDecimal.TEN, TaxRate.of(23)))
             );
+
             String externalId = "ext-123";
 
             given(invoiceService.buildInvoice(command)).willReturn(invoice);
             given(invoiceTransactionBoundary.saveNewInvoice(invoice)).willReturn(invoice);
-            
-            // Mocking reconciliation check (before issue) to return empty
             given(taxSystemPort.findByOrderId(orderId.toString())).willReturn(List.of());
             given(invoiceReconciliationService.reconcileFromExisting(eq(invoice), anyList())).willReturn(Optional.empty());
-            
             given(taxSystemPort.issueInvoice(invoice)).willReturn(externalId);
+
+            willAnswer(invocation -> {
+                Invoice arg = invocation.getArgument(0);
+                arg.markAsIssuing();
+                return null;
+            }).given(invoiceTransactionBoundary).markAsIssuing(any(Invoice.class));
+
+            willAnswer(invocation -> {
+                Invoice argInvoice = invocation.getArgument(0);
+                String argExternalId = invocation.getArgument(1);
+                argInvoice.markAsIssued(argExternalId);
+                return null;
+            }).given(invoiceTransactionBoundary).markInvoiceAsIssued(any(Invoice.class), anyString());
 
             // when
             InvoiceIssueResult result = useCase.generate(command);
@@ -93,10 +110,10 @@ class InvoiceUseCaseImplTest {
             // then
             assertThat(result).isInstanceOf(InvoiceIssueResult.Issued.class);
             assertThat(result.invoiceId()).isEqualTo(invoiceId);
-            
+
             then(invoiceTransactionBoundary).should().markAsIssuing(invoice);
             then(invoiceTransactionBoundary).should().markInvoiceAsIssued(invoice, externalId);
-            
+
             assertThat(invoice.getStatus()).isEqualTo(InvoiceStatus.ISSUED);
             assertThat(invoice.getExternalId()).isEqualTo(externalId);
         }
