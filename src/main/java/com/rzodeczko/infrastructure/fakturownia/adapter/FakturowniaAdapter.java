@@ -111,6 +111,7 @@ public class FakturowniaAdapter implements TaxSystemPort {
                             .path("/invoices")
                             .queryParam("api_token", fakturowniaProperties.token())
                             .queryParam("oid", orderId)
+                            .queryParam("status", "issued")
                             .build())
                     .retrieve()
                     .onStatus(HttpStatusCode::isError,
