@@ -43,8 +43,6 @@ springdoc:
 
 reconciliation:
   jobs:
-    duplicate-invoice-remediation:
-      enabled: true
     unknown-invoice-recovery:
       enabled: true
 

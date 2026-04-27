@@ -34,7 +34,7 @@ class InvoiceMapperTest {
 
     @Test
     void toDomain_shouldMapEntityToDomain() {
-        InvoiceItemEmbeddable item = new InvoiceItemEmbeddable("item", 2, BigDecimal.TEN);
+        InvoiceItemEmbeddable item = new InvoiceItemEmbeddable("item", 2, BigDecimal.TEN, BigDecimal.valueOf(23));
         InvoiceEntity entity = InvoiceEntity.builder()
                 .id(UUID.randomUUID())
                 .orderId(UUID.randomUUID())

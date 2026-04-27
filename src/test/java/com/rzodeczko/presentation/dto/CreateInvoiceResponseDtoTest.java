@@ -14,23 +14,31 @@ class CreateInvoiceResponseDtoTest {
     @Test
     void constructor_shouldCreateDto() {
         UUID invoiceId = UUID.randomUUID();
-        CreateInvoiceResponseDto dto = new CreateInvoiceResponseDto(invoiceId);
+        String status = "SUCCESS";
+        String message = "Invoice created";
+        CreateInvoiceResponseDto dto = new CreateInvoiceResponseDto(invoiceId, status, message);
         assertEquals(invoiceId, dto.invoiceId());
+        assertEquals(status, dto.status());
+        assertEquals(message, dto.message());
     }
 
     @Test
     void equals_shouldReturnTrueForSameValues() {
         UUID invoiceId = UUID.randomUUID();
-        CreateInvoiceResponseDto dto1 = new CreateInvoiceResponseDto(invoiceId);
-        CreateInvoiceResponseDto dto2 = new CreateInvoiceResponseDto(invoiceId);
+        String status = "SUCCESS";
+        String message = "Invoice created";
+        CreateInvoiceResponseDto dto1 = new CreateInvoiceResponseDto(invoiceId, status, message);
+        CreateInvoiceResponseDto dto2 = new CreateInvoiceResponseDto(invoiceId, status, message);
         assertEquals(dto1, dto2);
     }
 
     @Test
     void hashCode_shouldBeSameForSameValues() {
         UUID invoiceId = UUID.randomUUID();
-        CreateInvoiceResponseDto dto1 = new CreateInvoiceResponseDto(invoiceId);
-        CreateInvoiceResponseDto dto2 = new CreateInvoiceResponseDto(invoiceId);
+        String status = "SUCCESS";
+        String message = "Invoice created";
+        CreateInvoiceResponseDto dto1 = new CreateInvoiceResponseDto(invoiceId, status, message);
+        CreateInvoiceResponseDto dto2 = new CreateInvoiceResponseDto(invoiceId, status, message);
         assertEquals(dto1.hashCode(), dto2.hashCode());
     }
 }

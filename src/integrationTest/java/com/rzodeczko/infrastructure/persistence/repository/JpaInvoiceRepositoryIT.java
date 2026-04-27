@@ -33,7 +33,7 @@ class JpaInvoiceRepositoryIT {
                 .buyerName("John Doe")
                 .status("DRAFT")
                 .items(List.of(
-                        new InvoiceItemEmbeddable("Item1", 1, BigDecimal.TEN)
+                        new InvoiceItemEmbeddable("Item1", 1, BigDecimal.TEN, BigDecimal.valueOf(23))
                 ))
                 .build();
 

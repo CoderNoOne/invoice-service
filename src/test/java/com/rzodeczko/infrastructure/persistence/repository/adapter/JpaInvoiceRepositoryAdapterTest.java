@@ -27,7 +27,7 @@ class JpaInvoiceRepositoryAdapterTest {
     void setUp() {
         jpaInvoiceRepository = mock(JpaInvoiceRepository.class);
         invoiceMapper = mock(InvoiceMapper.class);
-        adapter = new JpaInvoiceRepositoryAdapter(jpaInvoiceRepository, invoiceMapper, null);
+        adapter = new JpaInvoiceRepositoryAdapter(jpaInvoiceRepository, invoiceMapper);
     }
 
     @Test

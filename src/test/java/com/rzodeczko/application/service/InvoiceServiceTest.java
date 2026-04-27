@@ -40,7 +40,7 @@ class InvoiceServiceTest {
     void buildInvoice_shouldCreateInvoiceWithCorrectFields() {
         var command = new com.rzodeczko.application.port.input.GenerateInvoiceCommand(
                 UUID.randomUUID(), "1234567890", "Test Buyer",
-                List.of(new com.rzodeczko.application.port.input.ItemCommand("item", 2, BigDecimal.TEN))
+                List.of(new com.rzodeczko.application.port.input.ItemCommand("item", 2, BigDecimal.TEN, new BigDecimal("23")))
         );
         Invoice invoice = invoiceService.buildInvoice(command);
         assertEquals(command.orderId(), invoice.getOrderId());

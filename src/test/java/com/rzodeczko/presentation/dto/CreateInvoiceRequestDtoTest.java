@@ -6,7 +6,7 @@ import java.math.BigDecimal;
 import java.util.List;
 import java.util.UUID;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
  * Unit tests for CreateInvoiceRequestDto.
@@ -19,7 +19,7 @@ class CreateInvoiceRequestDtoTest {
         String taxId = "123";
         String buyerName = "Buyer";
         List<CreateInvoiceRequestDto.ItemRequestDto> items = List.of(
-                new CreateInvoiceRequestDto.ItemRequestDto("Item1", 1, BigDecimal.ONE)
+                new CreateInvoiceRequestDto.ItemRequestDto("Item1", 1, BigDecimal.ONE, BigDecimal.valueOf(23))
         );
         CreateInvoiceRequestDto dto = new CreateInvoiceRequestDto(orderId, taxId, buyerName, items);
         assertEquals(orderId, dto.orderId());
@@ -33,7 +33,7 @@ class CreateInvoiceRequestDtoTest {
         String name = "Item1";
         int quantity = 1;
         BigDecimal price = BigDecimal.ONE;
-        CreateInvoiceRequestDto.ItemRequestDto item = new CreateInvoiceRequestDto.ItemRequestDto(name, quantity, price);
+        CreateInvoiceRequestDto.ItemRequestDto item = new CreateInvoiceRequestDto.ItemRequestDto(name, quantity, price, BigDecimal.valueOf(23));
         assertEquals(name, item.name());
         assertEquals(quantity, item.quantity());
         assertEquals(price, item.price());

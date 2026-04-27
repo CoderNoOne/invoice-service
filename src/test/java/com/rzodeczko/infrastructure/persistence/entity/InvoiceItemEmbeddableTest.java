@@ -42,7 +42,7 @@ class InvoiceItemEmbeddableTest {
         int quantity = 1;
         BigDecimal unitPrice = BigDecimal.ONE;
 
-        InvoiceItemEmbeddable item = new InvoiceItemEmbeddable(name, quantity, unitPrice);
+        InvoiceItemEmbeddable item = new InvoiceItemEmbeddable(name, quantity, unitPrice, BigDecimal.valueOf(23));
 
         assertEquals(name, item.getName());
         assertEquals(quantity, item.getQuantity());
@@ -51,15 +51,15 @@ class InvoiceItemEmbeddableTest {
 
     @Test
     void equals_shouldReturnTrueForSameValues() {
-        InvoiceItemEmbeddable item1 = new InvoiceItemEmbeddable("Item1", 1, BigDecimal.ONE);
-        InvoiceItemEmbeddable item2 = new InvoiceItemEmbeddable("Item1", 1, BigDecimal.ONE);
+        InvoiceItemEmbeddable item1 = new InvoiceItemEmbeddable("Item1", 1, BigDecimal.ONE, BigDecimal.valueOf(23));
+        InvoiceItemEmbeddable item2 = new InvoiceItemEmbeddable("Item1", 1, BigDecimal.ONE, BigDecimal.valueOf(23));
         assertEquals(item1, item2);
     }
 
     @Test
     void hashCode_shouldBeSameForSameValues() {
-        InvoiceItemEmbeddable item1 = new InvoiceItemEmbeddable("Item1", 1, BigDecimal.ONE);
-        InvoiceItemEmbeddable item2 = new InvoiceItemEmbeddable("Item1", 1, BigDecimal.ONE);
+        InvoiceItemEmbeddable item1 = new InvoiceItemEmbeddable("Item1", 1, BigDecimal.ONE, BigDecimal.valueOf(23));
+        InvoiceItemEmbeddable item2 = new InvoiceItemEmbeddable("Item1", 1, BigDecimal.ONE, BigDecimal.valueOf(23));
         assertEquals(item1.hashCode(), item2.hashCode());
     }
 }

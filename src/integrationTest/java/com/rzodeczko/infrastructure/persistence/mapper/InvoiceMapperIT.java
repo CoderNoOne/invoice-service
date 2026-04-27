@@ -3,59 +3,69 @@ package com.rzodeczko.infrastructure.persistence.mapper;
 import com.rzodeczko.domain.model.Invoice;
 import com.rzodeczko.domain.model.InvoiceItem;
 import com.rzodeczko.domain.model.InvoiceStatus;
+import com.rzodeczko.domain.vo.TaxRate;
 import com.rzodeczko.infrastructure.persistence.entity.InvoiceEntity;
 import com.rzodeczko.infrastructure.persistence.entity.InvoiceItemEmbeddable;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.context.annotation.Import;
 import org.springframework.test.context.ActiveProfiles;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.UUID;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.assertj.core.api.Assertions.assertThat;
 
-@SpringBootTest
-@Import(InvoiceMapper.class)
+@SpringBootTest(classes = InvoiceMapper.class)
 @ActiveProfiles("integration-test")
-@Transactional
+@DisplayName("InvoiceMapper Integration Tests")
 class InvoiceMapperIT {
 
     @Autowired
     private InvoiceMapper invoiceMapper;
 
     @Test
+    @DisplayName("Should convert domain Invoice to InvoiceEntity with all fields including taxRate")
     void toEntity_shouldConvertDomainToEntity() {
+        // given
         UUID id = UUID.randomUUID();
         UUID orderId = UUID.randomUUID();
+        BigDecimal taxRate = BigDecimal.valueOf(23);
         List<InvoiceItem> items = List.of(
-                new InvoiceItem("Item1", 1, BigDecimal.TEN),
-                new InvoiceItem("Item2", 2, BigDecimal.valueOf(20))
+                new InvoiceItem("Item1", 1, BigDecimal.TEN, TaxRate.of(taxRate)),
+                new InvoiceItem("Item2", 2, BigDecimal.valueOf(20), TaxRate.of(8))
         );
         Invoice domain = Invoice.restore(id, orderId, "123-456", "John Doe", "ext-123", InvoiceStatus.ISSUED, items);
 
+        // when
         InvoiceEntity entity = invoiceMapper.toEntity(domain);
 
-        assertEquals(id, entity.getId());
-        assertEquals(orderId, entity.getOrderId());
-        assertEquals("123-456", entity.getTaxId());
-        assertEquals("John Doe", entity.getBuyerName());
-        assertEquals("ext-123", entity.getExternalId());
-        assertEquals("ISSUED", entity.getStatus());
-        assertEquals(2, entity.getItems().size());
-        assertEquals("Item1", entity.getItems().get(0).getName());
-        assertEquals(1, entity.getItems().get(0).getQuantity());
+        // then
+        assertThat(entity.getId()).isEqualTo(id);
+        assertThat(entity.getOrderId()).isEqualTo(orderId);
+        assertThat(entity.getTaxId()).isEqualTo("123-456");
+        assertThat(entity.getBuyerName()).isEqualTo("John Doe");
+        assertThat(entity.getExternalId()).isEqualTo("ext-123");
+        assertThat(entity.getStatus()).isEqualTo("ISSUED");
+        assertThat(entity.getItems()).hasSize(2);
+        
+        InvoiceItemEmbeddable firstItem = entity.getItems().get(0);
+        assertThat(firstItem.getName()).isEqualTo("Item1");
+        assertThat(firstItem.getQuantity()).isEqualTo(1);
+        assertThat(firstItem.getTaxRate()).isEqualByComparingTo(taxRate);
     }
 
     @Test
+    @DisplayName("Should convert InvoiceEntity to domain Invoice with all fields including TaxRate VO")
     void toDomain_shouldConvertEntityToDomain() {
+        // given
         UUID id = UUID.randomUUID();
         UUID orderId = UUID.randomUUID();
+        BigDecimal taxRate = BigDecimal.valueOf(23);
         List<InvoiceItemEmbeddable> items = List.of(
-                new InvoiceItemEmbeddable("Item1", 1, BigDecimal.TEN)
+                new InvoiceItemEmbeddable("Item1", 1, BigDecimal.TEN, taxRate)
         );
         InvoiceEntity entity = InvoiceEntity.builder()
                 .id(id)
@@ -67,35 +77,46 @@ class InvoiceMapperIT {
                 .items(items)
                 .build();
 
+        // when
         Invoice domain = invoiceMapper.toDomain(entity);
 
-        assertEquals(id, domain.getId());
-        assertEquals(orderId, domain.getOrderId());
-        assertEquals("123-456", domain.getTaxId());
-        assertEquals("John Doe", domain.getBuyerName());
-        assertEquals("ext-123", domain.getExternalId());
-        assertEquals(InvoiceStatus.ISSUED, domain.getStatus());
-        assertEquals(1, domain.getItems().size());
-        assertEquals("Item1", domain.getItems().get(0).name());
+        // then
+        assertThat(domain.getId()).isEqualTo(id);
+        assertThat(domain.getOrderId()).isEqualTo(orderId);
+        assertThat(domain.getTaxId()).isEqualTo("123-456");
+        assertThat(domain.getBuyerName()).isEqualTo("John Doe");
+        assertThat(domain.getExternalId()).isEqualTo("ext-123");
+        assertThat(domain.getStatus()).isEqualTo(InvoiceStatus.ISSUED);
+        assertThat(domain.getItems()).hasSize(1);
+        
+        InvoiceItem firstItem = domain.getItems().get(0);
+        assertThat(firstItem.name()).isEqualTo("Item1");
+        assertThat(firstItem.taxRate().value()).isEqualByComparingTo(taxRate);
     }
 
     @Test
+    @DisplayName("Round-trip conversion should preserve all data consistency using recursive comparison")
     void roundTripConversion_shouldPreserveData() {
+        // given
         UUID id = UUID.randomUUID();
         UUID orderId = UUID.randomUUID();
         List<InvoiceItem> items = List.of(
-                new InvoiceItem("Item1", 1, BigDecimal.TEN)
+                new InvoiceItem("Item 1", 2, new BigDecimal("100.50"), TaxRate.of(23)),
+                new InvoiceItem("Item 2", 1, new BigDecimal("50.00"), TaxRate.of(8))
         );
-        Invoice originalDomain = Invoice.restore(id, orderId, "123", "Buyer", "ext-1", InvoiceStatus.DRAFT, items);
+        Invoice originalDomain = Invoice.restore(
+                id, orderId, "PL1234567890", "Test Buyer Sp. z o.o.", 
+                "FA/2023/001", InvoiceStatus.ISSUED, items
+        );
 
+        // when
         InvoiceEntity entity = invoiceMapper.toEntity(originalDomain);
         Invoice restoredDomain = invoiceMapper.toDomain(entity);
 
-        assertEquals(originalDomain.getId(), restoredDomain.getId());
-        assertEquals(originalDomain.getOrderId(), restoredDomain.getOrderId());
-        assertEquals(originalDomain.getTaxId(), restoredDomain.getTaxId());
-        assertEquals(originalDomain.getBuyerName(), restoredDomain.getBuyerName());
-        assertEquals(originalDomain.getExternalId(), restoredDomain.getExternalId());
-        assertEquals(originalDomain.getStatus(), restoredDomain.getStatus());
+        // then
+        assertThat(restoredDomain)
+                .usingRecursiveComparison()
+                .withComparatorForType(BigDecimal::compareTo, BigDecimal.class)
+                .isEqualTo(originalDomain);
     }
 }
