@@ -276,7 +276,7 @@ All variables are read from `.env` (used by Docker Compose). Copy `.env.example`
 | Fakturownia `401 Unauthorized` (outbound) | Invalid or expired token / wrong URL | Re-check `INVOICE_SERVICE_FAKTUROWNIA_TOKEN` and `INVOICE_SERVICE_FAKTUROWNIA_URL` in `.env`, then restart |
 | Webhook returns `401 Unauthorized` | Shared secret mismatch, unknown `appName`, or client disabled | Re-check `INVOICE_SERVICE_WEBHOOK_TOKEN` against the value in the Fakturownia webhook panel; verify `webhook.clients.fakturownia.enabled: true` |
 | Webhook returns `429 Too Many Requests` | Per-minute rate limit exceeded | Lower request volume from Fakturownia or raise `webhook.clients.fakturownia.requests-per-minute-limit` |
-| Webhook calls hang / Redis errors at startup | Redis unreachable (rate limiter cannot initialize buckets) | Provide a reachable Redis via `SPRING_DATA_REDIS_HOST` / `SPRING_DATA_REDIS_PORT`; Redis is **not** bundled in `docker-compose.yaml` |
+| Webhook calls hang / Redis errors at startup | Redis unreachable (rate limiter cannot initialize buckets) | Provide a reachable Redis via `SPRING_DATA_REDIS_HOST` / `SPRING_DATA_REDIS_PORT` |
 | Reconciliation job not running | `@EnableScheduling` missing or job disabled | Ensure `ShedLockConfig` (which carries `@EnableScheduling`) is loaded; confirm `reconciliation.jobs.unknown-invoice-recovery.enabled: true` |
 | PDF returns `409 InvoiceNotIssued` | Invoice still in `DRAFT` / `ISSUING` / `ISSUE_UNKNOWN` | Confirm `POST /invoices` returned `201 ISSUED`; if `202 PENDING_CONFIRMATION`, wait for the async reconciliation job |
 
@@ -361,8 +361,6 @@ Only if all four checks pass is the controller invoked.
 ### Why Redis-backed rate limiting
 
 Bucket4j buckets are stored in Redis via `LettuceBasedProxyManager`, so the limit is **shared across all replicas** of the service. Scaling horizontally does not multiply the effective rate limit — a single Fakturownia client is throttled globally regardless of which pod handles the request. Bucket TTL is bound to refill time (1 min), so abandoned clients do not pollute Redis indefinitely.
-
-> **Redis is not bundled in `docker-compose.yaml`.** Provide a reachable Redis instance via `SPRING_DATA_REDIS_HOST` / `SPRING_DATA_REDIS_PORT`. The application starts without Redis but webhook calls will fail when the rate limiter tries to talk to it.
 
 ### Trade-offs and known limitations
 
