@@ -153,6 +153,22 @@ curl -X GET "http://localhost:8082/invoices/3fa85f64-5717-4562-b3fc-2c963f66afa6
 curl "http://localhost:8082/"
 ```
 
+### IntelliJ HTTP Client examples
+
+A ready-to-use [`api-examples.http`](./api-examples.http) file is included in the repository root. It covers all endpoints — health check, invoice creation (happy path, validation errors, idempotency), PDF retrieval (cold and warm cache), and all webhook scenarios (valid token, wrong token, unknown `appName`, missing `external_id`). Open it with **IntelliJ IDEA's HTTP Client** or any compatible tool.
+
+To configure the base URL and secrets, create an `http-client.env.json` file next to `api-examples.http`:
+
+```json
+{
+  "local": {
+    "API_URL": "http://localhost:8082",
+    "WEBHOOK_TOKEN": "secret",
+    "WEBHOOK_APP_NAME": "fakturownia"
+  }
+}
+```
+
 ---
 
 <a id="getting-started"></a>
@@ -304,7 +320,6 @@ graph TD
 
     IR --> JPA["JpaInvoiceRepositoryAdapter<br>MySQL — PDF cache"]
     TS --> FA["FakturowniaAdapter<br>RestClient"]
-
     JPA -.-> DB[("MySQL 9.6")]
     FA -.-> FAPI
 ```
@@ -621,6 +636,7 @@ Only the `health` actuator endpoint is exposed by default (`management.endpoints
 │   └── integrationTest/                        # End-to-end tests (separate Maven source set)
 ├── docker-compose.yaml                         # MySQL + application orchestration (Redis must be provided externally)
 ├── Dockerfile                                  # Multi-stage build (Maven → minimal JRE runtime)
+├── api-examples.http                           # IntelliJ HTTP Client — ready-to-run examples for all endpoints (see API Endpoints)
 ├── .env.example                                # Environment variables template
 ├── LICENSE                                     # MIT
 └── pom.xml
