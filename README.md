@@ -404,11 +404,14 @@ stateDiagram-v2
     [*] --> DRAFT: POST /invoices
     DRAFT --> ISSUING: pre-call state guard
     ISSUING --> ISSUED: Fakturownia returns externalId
-    ISSUING --> ISSUE_UNKNOWN: TaxSystemTemporaryException<br/>(timeout / 5xx) and not found via findByOrderId
+    ISSUING --> ISSUED: findByOrderId finds 1 match<br/>(pre-call recovery or post-failure sync recovery)
+    ISSUING --> ISSUED: findByOrderId finds 2+ matches<br/>and local externalId matches one of them
+    ISSUING --> ISSUE_UNKNOWN: TaxSystemTemporaryException<br/>(timeout / 5xx) and findByOrderId finds 0 matches
     ISSUING --> ISSUE_FAILED: TaxSystemPermanentException<br/>(4xx, validation rejected)
-    ISSUING --> RECONCILIATION_REQUIRED: 2+ external invoices found<br/>via synchronous findByOrderId (POST /invoices)
-    ISSUE_UNKNOWN --> ISSUED: async reconciliation job<br/>finds 1 matching external invoice
-    ISSUE_UNKNOWN --> RECONCILIATION_REQUIRED: async reconciliation job<br/>finds 2+ matching external invoices
+    ISSUING --> RECONCILIATION_REQUIRED: findByOrderId finds 2+ matches<br/>and local externalId matches none of them
+    ISSUE_UNKNOWN --> ISSUED: async reconciliation job finds 1 match
+    ISSUE_UNKNOWN --> ISSUED: async reconciliation job finds 2+ matches<br/>and local externalId matches one of them
+    ISSUE_UNKNOWN --> RECONCILIATION_REQUIRED: async reconciliation job finds 2+ matches<br/>and local externalId matches none of them
     ISSUED --> [*]
     ISSUE_FAILED --> [*]
     RECONCILIATION_REQUIRED --> [*]: manual intervention
@@ -419,9 +422,9 @@ stateDiagram-v2
 | `DRAFT` | Local record persisted; Fakturownia not yet called. |
 | `ISSUING` | Pre-call state guard — Fakturownia call is in flight. Used to detect interrupted flows on restart. |
 | `ISSUED` | Confirmed in Fakturownia, `externalId` is stored locally. Terminal happy path. |
-| `ISSUE_UNKNOWN` | Fakturownia call failed with a temporary error and no matching invoice was found via `findByOrderId`. Eligible for the async reconciliation job. |
+| `ISSUE_UNKNOWN` | Fakturownia call failed with a temporary error and `findByOrderId` returned no matches. Eligible for the async reconciliation job. |
 | `ISSUE_FAILED` | Fakturownia rejected the request permanently (4xx, validation). Terminal failure. |
-| `RECONCILIATION_REQUIRED` | Two or more Fakturownia invoices match the same local `orderId` — either detected synchronously during `POST /invoices` (via pre-call or post-failure `findByOrderId`) or asynchronously by the reconciliation job. Manual intervention required — the service refuses to guess which one to bind. |
+| `RECONCILIATION_REQUIRED` | `findByOrderId` returned 2+ external invoices matching the same `orderId`, and none of their IDs matches the locally stored `externalId`. Manual intervention required — the service refuses to guess which one to bind. Can be reached synchronously (during `POST /invoices`) or asynchronously (via the reconciliation job). |
 
 ### Recovery strategy
 
@@ -434,6 +437,17 @@ The controlling logic lives in `InvoiceUseCaseImpl.tryIssueAndRecover` and `Invo
 
 `TaxSystemPermanentException` (4xx) is **not** retried — the invoice is marked `ISSUE_FAILED` and the error is propagated to the client.
 
+#### `reconcileFromExisting` decision tree
+
+`InvoiceReconciliationService.reconcileFromExisting` is shared by both the synchronous create flow and the async job. Its logic for a given set of external invoices matching by `orderId`:
+
+| Matches by `orderId` | Local `externalId` matches one of them? | Result |
+|---|---|---|
+| 0 | — | No result — upstream decides (`ISSUE_UNKNOWN` or pending) |
+| 1 | — | Bind `externalId`, mark `ISSUED` |
+| 2+ | Yes | Keep existing mapping, mark `ISSUED` (extras logged as warning) |
+| 2+ | No | Mark `RECONCILIATION_REQUIRED` — manual intervention needed |
+
 ### API response contract
 
 `POST /invoices` returns a `CreateInvoiceResponseDto` (`invoiceId`, `status`, `message`). The HTTP status code reflects which `InvoiceIssueResult` variant was produced:
@@ -442,7 +456,7 @@ The controlling logic lives in `InvoiceUseCaseImpl.tryIssueAndRecover` and `Invo
 |------|----------|------|--------------|
 | `201 Created` | `ISSUED` | Invoice exists in Fakturownia and is bound locally. | Proceed normally. |
 | `202 Accepted` | `PENDING_CONFIRMATION` | Local record is `ISSUE_UNKNOWN`. Async job will reconcile. | Poll the invoice, or wait for an out-of-band confirmation. Do not retry `POST /invoices` — the unique constraint on `orderId` will surface the same record. |
-| `409 Conflict` | `RECONCILIATION_REQUIRED` | Multiple matching external invoices found for one local `orderId`. | Manual intervention — deduplicate in Fakturownia, then resolve the local record. |
+| `409 Conflict` | `RECONCILIATION_REQUIRED` | 2+ external invoices match the same `orderId` and none matches the local `externalId`. | Manual intervention — deduplicate in Fakturownia, then resolve the local record. |
 
 ### Asynchronous reconciliation job
 
@@ -462,7 +476,8 @@ For each batch (up to 50 invoices in `ISSUE_UNKNOWN`) it calls `taxSystemPort.fi
 
 - **0 matches** — leaves the invoice as `ISSUE_UNKNOWN` for the next tick (Fakturownia may still be catching up).
 - **1 match** — binds `externalId` and marks `ISSUED`.
-- **2+ matches** — marks `RECONCILIATION_REQUIRED` and logs the conflicting external IDs. The job refuses to pick one — a human resolves the duplicate.
+- **2+ matches, local `externalId` matches one** — keeps the existing mapping and marks `ISSUED` (duplicates logged as warning).
+- **2+ matches, local `externalId` matches none** — marks `RECONCILIATION_REQUIRED` and logs the conflicting external IDs. The job refuses to pick one — a human resolves the duplicate.
 
 If the local record already has a non-null `externalId` and that ID appears in the match set, the existing mapping is kept (and any extras are logged as a warning) — idempotent re-runs never repoint a confirmed invoice.
 
